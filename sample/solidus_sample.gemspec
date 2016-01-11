@@ -19,4 +19,5 @@ Gem::Specification.new do |s|
   s.requirements << 'none'
 
   s.add_dependency 'solidus_core', s.version
+  s.add_dependency 'solidus_globalize'
 end
