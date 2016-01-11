@@ -1,8 +1,8 @@
 Spree::Sample.load_sample("taxonomies")
 Spree::Sample.load_sample("products")
 
-categories = Spree::Taxonomy.find_by_name!("Categories")
-brands = Spree::Taxonomy.find_by_name!("Brand")
+categories = Spree::Taxonomy.with_translations(I18n.default_locale).find_by_name!("Categories")
+brands = Spree::Taxonomy.with_translations(I18n.default_locale).find_by_name!("Brand")
 
 products = {
   :ror_tote => "Ruby on Rails Tote",
@@ -18,7 +18,7 @@ products = {
 
 
 products.each do |key, name|
-  products[key] = Spree::Product.find_by_name!(name)
+  products[key] = Spree::Product.with_translations(I18n.default_locale).find_by_name!(name)
 end
 
 taxons = [

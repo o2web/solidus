@@ -55,7 +55,7 @@ Spree::ShippingMethod.create!([
   "UPS Two Day (USD)" => [10, "USD"],
   "UPS Ground (EUR)" => [8, "EUR"]
 }.each do |shipping_method_name, (price, currency)|
-  shipping_method = Spree::ShippingMethod.find_by_name!(shipping_method_name)
+  shipping_method = Spree::ShippingMethod.with_translations(I18n.default_locale).find_by_name!(shipping_method_name)
   shipping_method.calculator.preferences = {
     amount: price,
     currency: currency

@@ -1,7 +1,7 @@
 products =
-  { 
-    "Ruby on Rails Baseball Jersey" => 
-    { 
+  {
+    "Ruby on Rails Baseball Jersey" =>
+    {
       "Manufacturer" => "Wilson",
       "Brand" => "Wannabe Sports",
       "Model" => "JK1002",
@@ -45,7 +45,7 @@ products =
       "Size" => %Q{14 1/2" x 12" x 5"},
       "Material" => "600 Denier Polyester"
     },
-    "Ruby on Rails Mug" => 
+    "Ruby on Rails Mug" =>
     {
       "Type" => "Mug",
       "Size" => %Q{4.5" tall, 3.25" dia.}
@@ -58,7 +58,7 @@ products =
   }
 
 products.each do |name, properties|
-  product = Spree::Product.find_by_name(name)
+  product = Spree::Product.with_translations(I18n.default_locale).find_by_name(name)
   properties.each do |prop_name, prop_value|
     product.set_property(prop_name, prop_value)
   end
