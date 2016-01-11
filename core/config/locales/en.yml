@@ -1,4 +1,6 @@
 en:
+  routes:
+    products: products
   activerecord:
     attributes:
       spree/address:
