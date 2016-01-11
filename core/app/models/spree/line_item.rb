@@ -76,6 +76,19 @@ module Spree
       amount + promo_total
     end
 
+    def promo_total
+      @_promo_total ||= begin
+        order_promo, order_total = order.promo_total, order.item_total
+        if order_promo == 0.0
+          read_attribute(:promo_total)
+        elsif order_total == 0.0
+          BigDecimal(0.0)
+        else
+          (order_promo * amount) / order_total
+        end
+      end
+    end
+
     # @return [Spree::Money] the amount of this line item, taking into
     #   consideration line item promotions.
     def discounted_money
