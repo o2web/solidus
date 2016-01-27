@@ -6,4 +6,3 @@ color = Spree::OptionType.find_by_presentation!("Color")
 ror_baseball_jersey = Spree::Product.with_translations(I18n.default_locale).find_by_name!("Ruby on Rails Baseball Jersey")
 ror_baseball_jersey.option_types = [size, color]
 ror_baseball_jersey.save!
-

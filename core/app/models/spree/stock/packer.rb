@@ -3,7 +3,7 @@ module Spree
     class Packer
       attr_reader :stock_location, :inventory_units, :splitters
 
-      def initialize(stock_location, inventory_units, splitters=[Splitter::Base])
+      def initialize(stock_location, inventory_units, splitters = [Splitter::Base])
         @stock_location = stock_location
         @inventory_units = inventory_units
         @splitters = splitters
@@ -26,13 +26,11 @@ module Spree
             next unless stock_item
 
             on_hand, backordered = stock_item.fill_status(units.count)
-            raise Spree::Order::InsufficientStock unless on_hand > 0 || backordered > 0
             package.add_multiple units.slice!(0, on_hand), :on_hand if on_hand > 0
             package.add_multiple units.slice!(0, backordered), :backordered if backordered > 0
           else
             package.add_multiple units
           end
-
         end
         package
       end
@@ -55,7 +53,7 @@ module Spree
 
       def build_splitter
         splitter = nil
-        splitters.reverse.each do |klass|
+        splitters.reverse_each do |klass|
           splitter = klass.new(self, splitter)
         end
         splitter

@@ -20,7 +20,6 @@ require 'responders'
 StateMachines::Machine.ignore_method_conflicts = true
 
 module Spree
-
   mattr_accessor :user_class
 
   def self.user_class
@@ -41,7 +40,7 @@ module Spree
   #
   # This method is defined within the core gem on purpose.
   # Some people may only wish to use the Core part of Spree.
-  def self.config(&block)
+  def self.config(&_block)
     yield(Spree::Config)
   end
 
@@ -92,6 +91,7 @@ require 'spree/core/controller_helpers/store'
 require 'spree/core/controller_helpers/strong_parameters'
 require 'spree/core/unreturned_item_charger'
 require 'spree/core/role_configuration'
+require 'spree/core/stock_configuration'
 require 'spree/permission_sets'
 require 'spree/deprecation'
 

@@ -17,9 +17,8 @@ describe Spree::CreditCard, type: :model do
   let(:credit_card) { Spree::CreditCard.new }
 
   before(:each) do
-
     @order = create(:order)
-    @payment = Spree::Payment.create(:amount => 100, :order => @order)
+    @payment = Spree::Payment.create(amount: 100, order: @order)
 
     @success_response = double('gateway_response', success?: true, authorization: '123', avs_result: { 'code' => 'avs-code' })
     @fail_response = double('gateway_response', success?: false)
@@ -30,7 +29,7 @@ describe Spree::CreditCard, type: :model do
       purchase: @success_response,
       capture: @success_response,
       void: @success_response,
-      credit: @success_response,
+      credit: @success_response
     )
 
     allow(@payment).to receive_messages payment_method: @payment_gateway
@@ -117,10 +116,17 @@ describe Spree::CreditCard, type: :model do
     end
 
     let!(:persisted_card) { Spree::CreditCard.find(credit_card.id) }
-    let (:valid_address_attributes) { {firstname: "Hugo", lastname: "Furst",
-                                       address1: "123 Main", city: "Somewhere",
-                                       country_id: 1, zipcode: 55555,
-                                       phone: "1234567890"} }
+    let(:valid_address_attributes) do
+      {
+        firstname: "Hugo",
+        lastname: "Furst",
+        address1: "123 Main",
+        city: "Somewhere",
+        country_id: 1,
+        zipcode: 55_555,
+        phone: "1234567890"
+      }
+    end
 
     it "should not actually store the number" do
       expect(persisted_card.number).to be_blank
@@ -131,10 +137,10 @@ describe Spree::CreditCard, type: :model do
     end
 
     it "should save and update addresses through nested attributes" do
-      persisted_card.update_attributes({address_attributes: valid_address_attributes})
+      persisted_card.update_attributes({ address_attributes: valid_address_attributes })
       persisted_card.save!
-      updated_attributes = {id: persisted_card.address.id, address1: "123 Main St."}
-      persisted_card.update_attributes({address_attributes: updated_attributes})
+      updated_attributes = { id: persisted_card.address.id, address1: "123 Main St." }
+      persisted_card.update_attributes({ address_attributes: updated_attributes })
       expect(persisted_card.address.address1).to eq "123 Main St."
     end
   end
@@ -200,7 +206,6 @@ describe Spree::CreditCard, type: :model do
     it "does not blow up when passed one number" do
       credit_card.expiry = '12'
     end
-
   end
 
   context "#cc_type=" do

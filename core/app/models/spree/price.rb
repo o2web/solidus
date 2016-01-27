@@ -1,11 +1,17 @@
 module Spree
   class Price < Spree::Base
     acts_as_paranoid
+
+    MAXIMUM_AMOUNT = BigDecimal('99_999_999.99')
+
     belongs_to :variant, -> { with_deleted }, class_name: 'Spree::Variant', touch: true
 
     validate :check_price
-    validates :amount, numericality: { greater_than_or_equal_to: 0 }, allow_nil: true
-    validate :validate_amount_maximum
+    validates :amount, allow_nil: true, numericality: {
+      greater_than_or_equal_to: 0,
+      less_than_or_equal_to: MAXIMUM_AMOUNT
+    }
+
     after_save :set_default_price
 
     extend DisplayMoney
@@ -37,19 +43,9 @@ module Spree
       self.currency ||= Spree::Config[:currency]
     end
 
-    def maximum_amount
-      BigDecimal '999999.99'
-    end
-
-    def validate_amount_maximum
-      if amount && amount > maximum_amount
-        errors.add :amount, I18n.t('errors.messages.less_than_or_equal_to', count: maximum_amount)
-      end
-    end
-
     def set_default_price
       if is_default?
-        other_default_prices = variant.prices.where(currency: self.currency, is_default: true).where.not(id: self.id)
+        other_default_prices = variant.prices.where(currency: self.currency, is_default: true).where.not(id: id)
         other_default_prices.each { |p| p.update_attributes!(is_default: false) }
       end
     end

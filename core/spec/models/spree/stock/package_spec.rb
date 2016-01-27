@@ -2,7 +2,7 @@ require 'spec_helper'
 
 module Spree
   module Stock
-    describe Package, :type => :model do
+    describe Package, type: :model do
       let(:variant) { build(:variant, weight: 25.0) }
       let(:stock_location) { build(:stock_location) }
       let(:order) { build(:order) }
@@ -47,6 +47,24 @@ module Spree
         expect(item.quantity).to eq 1
       end
 
+      it 'builds the correct list of shipping methods based on stock location and categories' do
+        category1 = create(:shipping_category)
+        category2 = create(:shipping_category)
+        method1   = create(:shipping_method, available_to_all: true)
+        method2   = create(:shipping_method, stock_locations: [stock_location])
+        method1.shipping_categories = [category1, category2]
+        method2.shipping_categories = [category1, category2]
+        variant1 = mock_model(Variant, shipping_category: category1)
+        variant2 = mock_model(Variant, shipping_category: category2)
+        variant3 = mock_model(Variant, shipping_category: nil)
+        contents = [ContentItem.new(build(:inventory_unit, variant: variant1)),
+                    ContentItem.new(build(:inventory_unit, variant: variant1)),
+                    ContentItem.new(build(:inventory_unit, variant: variant2)),
+                    ContentItem.new(build(:inventory_unit, variant: variant3))]
+
+        package = Package.new(stock_location, contents)
+        expect(package.shipping_methods).to eq([method1, method2])
+      end
       # Contains regression test for https://github.com/spree/spree/issues/2804
       it 'builds a list of shipping methods common to all categories' do
         category1 = create(:shipping_category)
@@ -79,7 +97,7 @@ module Spree
         subject.add build_inventory_unit, :backordered
 
         shipping_method = build(:shipping_method)
-        subject.shipping_rates = [ Spree::ShippingRate.new(shipping_method: shipping_method, cost: 10.00, selected: true) ]
+        subject.shipping_rates = [Spree::ShippingRate.new(shipping_method: shipping_method, cost: 10.00, selected: true)]
 
         shipment = subject.to_shipment
         expect(shipment.stock_location).to eq subject.stock_location
@@ -124,7 +142,6 @@ module Spree
       describe "#remove" do
         let(:unit) { build_inventory_unit }
         context "there is a content item for the inventory unit" do
-
           before { subject.add unit }
 
           it "removes that content item" do
@@ -143,7 +160,6 @@ module Spree
       describe "#order" do
         let(:unit) { build_inventory_unit }
         context "there is an inventory unit" do
-
           before { subject.add unit }
 
           it "returns an order" do

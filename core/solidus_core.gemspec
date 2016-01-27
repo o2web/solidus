@@ -12,7 +12,7 @@ Gem::Specification.new do |s|
   s.author      = 'Solidus Team'
   s.email       = 'contact@solidus.io'
   s.homepage    = 'http://solidus.io'
-  s.license     = %q{BSD-3}
+  s.license     = 'BSD-3'
 
   s.files        = `git ls-files`.split("\n")
   s.require_path = 'lib'
@@ -34,7 +34,7 @@ Gem::Specification.new do |s|
   s.add_dependency 'paperclip', '~> 4.2.0'
   s.add_dependency 'paranoia', '~> 2.1.4'
   s.add_dependency 'premailer-rails'
-  s.add_dependency 'rails', '~> 4.2.0'
+  s.add_dependency 'rails', '~> 4.2.5'
   s.add_dependency 'ransack', '~> 1.6.0'
   s.add_dependency 'responders'
   s.add_dependency 'state_machines-activerecord', '~> 0.2'
@@ -43,5 +43,4 @@ Gem::Specification.new do |s|
   s.add_dependency 'twitter_cldr', '~> 3.0'
 
   s.add_development_dependency 'email_spec', '~> 1.6'
-  s.add_dependency 'sprockets-rails', '~> 2.0'
 end

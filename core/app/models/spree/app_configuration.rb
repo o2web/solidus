@@ -17,7 +17,6 @@
 #
 require "spree/core/search/base"
 require "spree/core/search/variant"
-require 'spree/core/stock_configuration'
 
 module Spree
   class AppConfiguration < Preferences::Configuration
@@ -223,7 +222,7 @@ module Spree
 
     # @!attribute [rw] show_raw_product_description
     #   @return [Boolean] Don't escape HTML of product descriptions. (default: +false+)
-    preference :show_raw_product_description, :boolean, :default => false
+    preference :show_raw_product_description, :boolean, default: false
 
     # @!attribute [rw] tax_using_ship_address
     #   @return [Boolean] Use the shipping address rather than the billing address to determine tax (default: +true+)
@@ -244,7 +243,7 @@ module Spree
 
     # @!attribute [rw] mails_from
     #   @return [String] Email address used as +From:+ field in transactional emails.
-    preference :mails_from, :string, :default => 'spree@example.com'
+    preference :mails_from, :string, default: 'spree@example.com'
 
     # Store credits configurations
 
@@ -313,7 +312,7 @@ module Spree
     end
 
     def stock
-      Spree::StockConfiguration
+      @stock_configuration ||= Spree::Core::StockConfiguration.new
     end
 
     # all the following can be deprecated when store prefs are no longer supported
@@ -323,7 +322,7 @@ module Spree
       site_url: :url,
       default_meta_description: :meta_description,
       default_meta_keywords: :meta_keywords,
-      default_seo_title: :seo_title,
+      default_seo_title: :seo_title
     }
 
     DEPRECATED_STORE_PREFERENCES.each do |old_preference_name, store_method|

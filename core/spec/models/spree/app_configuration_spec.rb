@@ -1,8 +1,7 @@
 require 'spec_helper'
 
-describe Spree::AppConfiguration, :type => :model do
-
-  let (:prefs) { Rails.application.config.spree.preferences }
+describe Spree::AppConfiguration, type: :model do
+  let(:prefs) { Rails.application.config.spree.preferences }
 
   it "should be available from the environment" do
     prefs.layout = "my/layout"
@@ -23,6 +22,6 @@ describe Spree::AppConfiguration, :type => :model do
 
   describe '#stock' do
     subject { prefs.stock }
-    it { is_expected.to eq Spree::StockConfiguration }
+    it { is_expected.to be_a Spree::Core::StockConfiguration }
   end
 end

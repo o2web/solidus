@@ -14,10 +14,10 @@ describe Spree::Shipment, type: :model do
       shipping_rates: [
         Spree::ShippingRate.new(
           shipping_method: shipping_method,
-          selected: true,
-        ),
+          selected: true
+        )
       ],
-      stock_location: stock_location,
+      stock_location: stock_location
     )
   end
 
@@ -47,7 +47,7 @@ describe Spree::Shipment, type: :model do
   it 'is backordered if one if its inventory_units is backordered' do
     shipment.inventory_units = [
       build(:inventory_unit, state: 'backordered', shipment: nil),
-      build(:inventory_unit, state: 'shipped', shipment: nil),
+      build(:inventory_unit, state: 'shipped', shipment: nil)
     ]
     expect(shipment).to be_backordered
   end
@@ -165,10 +165,12 @@ describe Spree::Shipment, type: :model do
     let(:shipment) { create(:shipment) }
     let(:shipping_method1) { create(:shipping_method) }
     let(:shipping_method2) { create(:shipping_method) }
-    let(:shipping_rates) { [
+    let(:shipping_rates) {
+      [
       Spree::ShippingRate.new(shipping_method: shipping_method1, cost: 10.00, selected: true),
       Spree::ShippingRate.new(shipping_method: shipping_method2, cost: 20.00)
-    ] }
+    ]
+    }
 
     it 'returns shipping_method from selected shipping_rate' do
       shipment.shipping_rates.delete_all
@@ -208,7 +210,7 @@ describe Spree::Shipment, type: :model do
       end
 
       it 'uses the pluggable estimator class' do
-        expect(Spree::StockConfiguration).to receive(:estimator_class).and_call_original
+        expect(Spree::Config.stock).to receive(:estimator_class).and_call_original
         shipment.refresh_rates
       end
 
@@ -234,15 +236,20 @@ describe Spree::Shipment, type: :model do
 
   context "#update!" do
     shared_examples_for "immutable once shipped" do
+      before { shipment.update_columns(state: 'shipped') }
+
       it "should remain in shipped state once shipped" do
-        shipment.state = 'shipped'
-        expect(shipment).to receive(:update_columns).with(state: 'shipped', updated_at: kind_of(Time))
-        shipment.update!(order)
+        expect {
+          shipment.update!(order)
+        }.not_to change { shipment.state }
       end
     end
 
     shared_examples_for "pending if backordered" do
       it "should have a state of pending if backordered" do
+        # Set as ready so we can test for change
+        shipment.update_attributes!(state: 'ready')
+
         allow(shipment).to receive_messages(inventory_units: [mock_model(Spree::InventoryUnit, backordered?: true)])
         expect(shipment).to receive(:update_columns).with(state: 'pending', updated_at: kind_of(Time))
         shipment.update!(order)
@@ -252,6 +259,8 @@ describe Spree::Shipment, type: :model do
     context "when order cannot ship" do
       before { allow(order).to receive_messages can_ship?: false }
       it "should result in a 'pending' state" do
+        # Set as ready so we can test for change
+        shipment.update_attributes!(state: 'ready')
         expect(shipment).to receive(:update_columns).with(state: 'pending', updated_at: kind_of(Time))
         shipment.update!(order)
       end
@@ -603,17 +612,30 @@ describe Spree::Shipment, type: :model do
   end
 
   context "#tracking_url" do
-    subject do
-      shipment.tracking_url
+    subject { shipment.tracking_url }
+
+    context "when tracking has not yet been set" do
+      it { is_expected.to be nil }
     end
 
-    before do
-      shipping_method.update!(tracking_url: "https://example.com/:tracking")
-      shipment.tracking = '1Z12345'
+    context "when tracking has been set, but a shipping method is not present" do
+      before do
+        shipment.tracking = "12345"
+        shipment.shipping_rates.clear
+      end
+
+      it { is_expected.to be nil }
     end
 
-    it "uses shipping method to determine url" do
-      is_expected.to eq("https://example.com/1Z12345")
+    context "when tracking has been set and a shipping method exists" do
+      before do
+        shipment.tracking = "12345"
+        shipment.shipping_method.update(tracking_url: "https://example.com/:tracking")
+      end
+
+      it "builds the tracking url with the shipping method" do
+        expect(subject).to eql("https://example.com/12345")
+      end
     end
   end
 
@@ -648,7 +670,7 @@ describe Spree::Shipment, type: :model do
   context "state changes" do
     before do
       # Must be stubbed so transition can succeed
-      allow(order).to receive_messages :paid? => true
+      allow(order).to receive_messages paid?: true
     end
 
     it "are logged to the database" do
@@ -662,13 +684,13 @@ describe Spree::Shipment, type: :model do
   end
 
   context "don't require shipment" do
-    let(:stock_location) { create(:stock_location, fulfillable: false)}
+    let(:stock_location) { create(:stock_location, fulfillable: false) }
     let(:unshippable_shipment) do
       create(
         :shipment,
         address: create(:address),
         stock_location: stock_location,
-        inventory_units: [build(:inventory_unit)],
+        inventory_units: [build(:inventory_unit)]
       )
     end
 

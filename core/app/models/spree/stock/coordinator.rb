@@ -20,6 +20,8 @@ module Spree
         packages = build_packages(packages)
         packages = prioritize_packages(packages)
         packages = estimate_packages(packages)
+        validate_packages(packages)
+        packages
       end
 
       # Build packages for the inventory units that have preferred stock locations first
@@ -33,7 +35,7 @@ module Spree
       # through the rest of the packing / prioritization, lets just put them
       # in packages we know they should be in and deal with other automatically-
       # handled inventory units otherwise.
-      def build_location_configured_packages(packages = Array.new)
+      def build_location_configured_packages(packages = [])
         order.order_stock_locations.where(shipment_fulfilled: false).group_by(&:stock_location).each do |stock_location, stock_location_configurations|
           units = stock_location_configurations.flat_map do |stock_location_configuration|
             unallocated_inventory_units.select { |iu| iu.variant == stock_location_configuration.variant }.take(stock_location_configuration.quantity)
@@ -54,7 +56,7 @@ module Spree
       # for the given order
       #
       # Returns an array of Package instances
-      def build_packages(packages = Array.new)
+      def build_packages(packages = [])
         stock_location_variant_ids.each do |stock_location, variant_ids|
           units_for_location = unallocated_inventory_units.select { |unit| variant_ids.include?(unit.variant_id) }
           packer = build_packer(stock_location, units_for_location)
@@ -127,11 +129,20 @@ module Spree
         packages
       end
 
+      def validate_packages(packages)
+        desired_quantity = inventory_units.size
+        packaged_quantity = packages.sum(&:quantity)
+        if packaged_quantity != desired_quantity
+          raise Spree::Order::InsufficientStock,
+            "Was only able to package #{packaged_quantity} inventory units of #{desired_quantity} requested"
+        end
+      end
+
       def build_packer(stock_location, inventory_units)
         Packer.new(stock_location, inventory_units, splitters(stock_location))
       end
 
-      def splitters(stock_location)
+      def splitters(_stock_location)
         # extension point to return custom splitters for a location
         Rails.application.config.spree.stock_splitters
       end
