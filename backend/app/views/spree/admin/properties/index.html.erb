@@ -1,5 +1,5 @@
 <% content_for :page_title do %>
-  <%= Spree.t(:properties) %>
+  <%= Spree::Property.model_name.human(count: :other) %>
 <% end %>
 
 <% content_for :page_actions do %>
@@ -50,8 +50,8 @@
   </colgroup>
   <thead>
     <tr data-hook="listing_properties_header">
-      <th><%= Spree.t(:name) %></th>
-      <th><%= Spree.t(:presentation) %></th>
+      <th><%= Spree::Property.human_attribute_name(:name) %></th>
+      <th><%= Spree::Property.human_attribute_name(:presentation) %></th>
       <th class="actions"></th>
     </tr>
   </thead>
@@ -74,11 +74,10 @@
 </table>
 <% else %>
   <div class="alpha twelve columns no-objects-found">
-    <%= Spree.t(:no_resource_found, resource: I18n.t(:other, scope: 'activerecord.models.spree/property')) %>
-    <% if can?(:create, Spree::Property) %>
-      <%= link_to Spree.t(:add_one), spree.new_admin_property_path %>!
-    <% end %>
+    <%= render 'spree/admin/shared/no_objects_found',
+                 resource: Spree::Property,
+                 new_resource_url: new_object_url %>
   </div>
 <% end %>
 
-<%= paginate @collection %>
+<%= paginate @collection, theme: "solidus_admin" %>

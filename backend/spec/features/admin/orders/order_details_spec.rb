@@ -334,6 +334,22 @@ describe "Order Details", type: :feature, js: true do
         end
       end
 
+      context 'removing an item' do
+        it "removes only the one item" do
+          @shipment2 = order.shipments.create(stock_location_id: stock_location2.id)
+          order.line_items[0].inventory_units[0].update!(shipment: @shipment2)
+          visit spree.edit_admin_order_path(order)
+
+          expect(page).to have_css('.stock-item', count: 2)
+
+          within '[data-hook=admin_shipment_form]', text: @shipment2.number do
+            click_icon :trash
+          end
+
+          expect(page).to have_css('.stock-item', count: 1)
+        end
+      end
+
       context 'splitting to shipment' do
         before do
           @shipment2 = order.shipments.create(stock_location_id: stock_location2.id)
@@ -348,7 +364,9 @@ describe "Order Details", type: :feature, js: true do
           fill_in 'item_quantity', with: 2
           click_icon :ok
 
-          wait_for_ajax
+          expect(page).not_to have_content(/Move .* to/)
+
+          expect(page).to have_css("#shipment_#{@shipment2.id}", count: 1)
 
           expect(order.shipments.count).to eq(1)
           expect(order.shipments.last.inventory_units_for(product.master).count).to eq(2)
@@ -359,11 +377,14 @@ describe "Order Details", type: :feature, js: true do
 
           it 'should not allow a split if the receiving shipment qty plus the incoming is greater than the count_on_hand' do
             expect(order.shipments.count).to eq(2)
+            expect(page).to have_css('.item-name', text: product.name, count: 1)
 
             within_row(1) { click_icon 'arrows-h' }
             targetted_select2 @shipment2.number, from: '#s2id_item_stock_location'
             fill_in 'item_quantity', with: 1
             click_icon :ok
+
+            expect(page).to have_css('.item-name', text: product.name, count: 2)
 
             within(all('.stock-contents', count: 2).first) do
               within_row(1) { click_icon 'arrows-h' }
@@ -398,9 +419,11 @@ describe "Order Details", type: :feature, js: true do
             within_row(1) { click_icon 'arrows-h' }
             targetted_select2 @shipment2.number, from: '#s2id_item_stock_location'
             fill_in 'item_quantity', with: 1
+
             click_icon :ok
 
-            wait_for_ajax
+            expect(page).not_to have_content(/Move .* to/)
+            expect(page).to have_css('.shipment', count: 2)
 
             expect(order.shipments.count).to eq(2)
             expect(order.shipments.first.inventory_units_for(product.master).count).to eq 1
@@ -461,7 +484,6 @@ describe "Order Details", type: :feature, js: true do
       # Order item actions
       expect(page).not_to have_css('.delete-item')
       expect(page).not_to have_css('.split-item')
-      expect(page).not_to have_css('.edit-item')
       expect(page).not_to have_css('.edit-tracking')
 
       expect(page).not_to have_css('#add-line-item')
@@ -485,8 +507,6 @@ describe "Order Details", type: :feature, js: true do
     it 'should not display order tabs or edit buttons without ability' do
       visit spree.edit_admin_order_path(order)
 
-      # Order Form
-      expect(page).not_to have_css('.edit-item')
       # Order Tabs
       expect(page).not_to have_link('Adjustments')
       expect(page).not_to have_link('Payments')

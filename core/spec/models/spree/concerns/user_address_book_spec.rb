@@ -238,11 +238,20 @@ module Spree
       end
 
       it "returns false if the addresses is not there" do
-        expect(user.remove_from_address_book(42)).to be false
+        expect(user.remove_from_address_book(0)).to be false
       end
     end
 
     context "#persist_order_address" do
+      it 'will save the bill/ship_address reference if it can' do
+        order = create :order
+        user.persist_order_address(order)
+
+        expect( user.bill_address_id ).to eq order.bill_address_id
+        expect( user.ship_address_id ).to eq order.ship_address_id
+        expect( user.bill_address_id ).not_to eq user.ship_address_id
+      end
+
       context "when automatic_default_address preference is at a default of true" do
         before do
           Spree::Config.automatic_default_address = true

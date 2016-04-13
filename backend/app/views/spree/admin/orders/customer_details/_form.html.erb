@@ -6,7 +6,7 @@
     <div data-hook="customer_fields" class="row">
       <div class="alpha eight columns">
         <div class="field">
-          <%= f.label :email, Spree.t(:email) %>
+          <%= f.label :email %>
           <%= f.email_field :email, :class => 'fullwidth' %>
         </div>
       </div>
@@ -70,8 +70,4 @@
   <div class="form-buttons filter-actions actions" data-hook="buttons">
     <%= button Spree.t('actions.update'), 'refresh' %>
   </div>
-
-  <% content_for :head do %>
-    <%= javascript_include_tag 'spree/backend/address_states.js' %>
-  <% end %>
 </fieldset>

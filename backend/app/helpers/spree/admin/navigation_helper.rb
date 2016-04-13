@@ -15,15 +15,15 @@ module Spree
         options[:route] ||= "admin_#{args.first}"
 
         destination_url = options[:url] || spree.send("#{options[:route]}_path")
-        titleized_label = Spree.t(options[:label], default: options[:label], scope: [:admin, :tab]).titleize
+        label = Spree.t(options[:label], scope: [:admin, :tab])
 
         css_classes = []
 
         if options[:icon]
-          link = link_to_with_icon(options[:icon], titleized_label, destination_url)
+          link = link_to_with_icon(options[:icon], label, destination_url)
           css_classes << 'tab-with-icon'
         else
-          link = link_to(titleized_label, destination_url)
+          link = link_to(label, destination_url)
         end
 
         selected = if options[:match_path].is_a? Regexp
@@ -31,7 +31,8 @@ module Spree
         elsif options[:match_path]
           request.fullpath.starts_with?("#{admin_path}#{options[:match_path]}")
         else
-          args.include?(controller.controller_name.to_sym)
+          request.fullpath.starts_with?(destination_url) ||
+            args.include?(controller.controller_name.to_sym)
         end
         css_classes << 'selected' if selected
 
@@ -54,17 +55,17 @@ module Spree
       def link_to_edit(resource, options = {})
         url = options[:url] || edit_object_url(resource)
         options[:data] = { action: 'edit' }
-        link_to_with_icon('edit', Spree.t(:edit), url, options)
+        link_to_with_icon('edit', Spree.t('actions.edit'), url, options)
       end
 
       def link_to_edit_url(url, options = {})
         options[:data] = { action: 'edit' }
-        link_to_with_icon('edit', Spree.t(:edit), url, options)
+        link_to_with_icon('edit', Spree.t('actions.edit'), url, options)
       end
 
       def link_to_delete(resource, options = {})
         url = options[:url] || object_url(resource)
-        name = options[:name] || Spree.t(:delete)
+        name = options[:name] || Spree.t('actions.delete')
         options[:class] = "delete-resource"
         options[:data] = { confirm: Spree.t(:are_you_sure), action: 'remove' }
         link_to_with_icon 'trash', name, url, options
@@ -74,7 +75,7 @@ module Spree
         options[:class] = (options[:class].to_s + " fa fa-#{icon_name} icon_link with-tip").strip
         options[:class] += ' no-text' if options[:no_text]
         options[:title] = text if options[:no_text]
-        text = options[:no_text] ? '' : raw("<span class='text'>#{text}</span>")
+        text = options[:no_text] ? '' : content_tag(:span, text, class: 'text')
         options.delete(:no_text)
         link_to(text, url, options)
       end
@@ -101,14 +102,8 @@ module Spree
           if html_options[:icon]
             html_options[:class] += " fa fa-#{html_options[:icon]}"
           end
-          link_to(text_for_button_link(text, html_options), url, html_options)
+          link_to(text, url, html_options)
         end
-      end
-
-      def text_for_button_link(text, _html_options)
-        s = ''
-        s << text
-        raw(s)
       end
 
       def configurations_menu_item(link_text, url, description = '')
@@ -124,6 +119,18 @@ module Spree
                     url.ends_with?("#{controller.controller_name}/edit") ||
                     url.ends_with?("#{controller.controller_name.singularize}/edit")
         options[:class] = is_active ? 'active' : nil
+        content_tag(:li, options) do
+          link_to(link_text, url)
+        end
+      end
+
+      def settings_tab_item(link_text, url, options = {})
+        is_active = url.ends_with?(controller.controller_name) ||
+                    url.ends_with?("#{controller.controller_name}/edit") ||
+                    url.ends_with?("#{controller.controller_name.singularize}/edit")
+        options[:class] = 'fa'
+        options[:class] += ' active' if is_active
+        options[:datahook] = "admin_settings_#{link_text.downcase.tr(' ', '_')}"
         content_tag(:li, options) do
           link_to(link_text, url)
         end

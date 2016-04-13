@@ -136,7 +136,7 @@ module Spree
 
       it "can update shipping method and transition from delivery to payment" do
         order.update_column(:state, "delivery")
-        shipment = create(:shipment, order: order)
+        shipment = create(:shipment, order: order, address: order.ship_address)
         shipment.refresh_rates
         shipping_rate = shipment.shipping_rates.where(selected: false).first
         api_put :update, id: order.to_param, order_token: order.guest_token,
@@ -272,7 +272,7 @@ module Spree
 
           expect(response.status).to eq(422)
           cc_errors = json_response['errors']['payments.Credit Card']
-          expect(cc_errors).to include("Number can't be blank")
+          expect(cc_errors).to include("Card Number can't be blank")
           expect(cc_errors).to include("Month is not a number")
           expect(cc_errors).to include("Year is not a number")
           expect(cc_errors).to include("Verification Value can't be blank")
@@ -301,7 +301,7 @@ module Spree
 
             expect(response.status).to eq(422)
             cc_errors = json_response['errors']['payments.Credit Card']
-            expect(cc_errors).to include("Number can't be blank")
+            expect(cc_errors).to include("Card Number can't be blank")
             expect(cc_errors).to include("Month is not a number")
             expect(cc_errors).to include("Year is not a number")
             expect(cc_errors).to include("Verification Value can't be blank")
@@ -377,14 +377,6 @@ module Spree
             expect(order.credit_cards).to match_array [credit_card]
           end
         end
-      end
-
-      it "can transition from confirm to complete" do
-        order.update_columns(completed_at: Time.current, state: 'complete')
-        allow_any_instance_of(Spree::Order).to receive_messages(payment_required?: false)
-        api_put :update, id: order.to_param, order_token: order.guest_token
-        expect(json_response['state']).to eq('complete')
-        expect(response.status).to eq(200)
       end
 
       it "returns the order if the order is already complete" do
@@ -511,7 +503,7 @@ module Spree
     context "PUT 'advance'" do
       let!(:order) { create(:order_with_line_items) }
 
-      it 'continues to advance advances an order while it can move forward' do
+      it 'continues to advance an order while it can move forward' do
         expect_any_instance_of(Spree::Order).to receive(:next).exactly(3).times.and_return(true, true, false)
         api_put :advance, id: order.to_param, order_token: order.guest_token
       end

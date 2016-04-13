@@ -84,37 +84,25 @@ describe Spree::Variant, type: :model do
           multi_variant.set_option_value('coolness_type', 'awesome')
         }.to change(multi_variant.option_values, :count).by(1)
       end
-    end
 
-    context "product has other variants" do
-      describe "option value accessors" do
-        before {
-          @multi_variant = create(:variant, product: variant.product)
-          variant.product.reload
-        }
+      context "and a variant is soft-deleted" do
+        let!(:old_options_text) { variant.options_text }
 
-        let(:multi_variant) { @multi_variant }
+        before { variant.destroy }
 
-        it "should set option value" do
-          expect(multi_variant.option_value('media_type')).to be_nil
-
-          multi_variant.set_option_value('media_type', 'DVD')
-          expect(multi_variant.option_value('media_type')).to eql 'DVD'
-
-          multi_variant.set_option_value('media_type', 'CD')
-          expect(multi_variant.option_value('media_type')).to eql 'CD'
+        it "still keeps the option values for that variant" do
+          expect(variant.reload.options_text).to eq(old_options_text)
         end
+      end
 
-        it "should not duplicate associated option values when set multiple times" do
-          multi_variant.set_option_value('media_type', 'CD')
+      context "and a variant is really deleted" do
+        let!(:old_option_values_variant_ids) { variant.option_values_variants.pluck(:id) }
 
-          expect {
-           multi_variant.set_option_value('media_type', 'DVD')
-          }.to_not change(multi_variant.option_values, :count)
+        before { variant.really_destroy! }
 
-          expect {
-            multi_variant.set_option_value('coolness_type', 'awesome')
-          }.to change(multi_variant.option_values, :count).by(1)
+        it "leaves no stale records behind" do
+          expect(old_option_values_variant_ids).to be_present
+          expect(Spree::OptionValuesVariant.where(id: old_option_values_variant_ids)).to be_empty
         end
       end
     end
@@ -143,7 +131,9 @@ describe Spree::Variant, type: :model do
 
   context "#currency" do
     it "returns the globally configured currency" do
-      expect(variant.currency).to eql "USD"
+      Spree::Deprecation.silence do
+        expect(variant.currency).to eql "USD"
+      end
     end
   end
 
@@ -196,13 +186,13 @@ describe Spree::Variant, type: :model do
     before do
       variant.prices << create(:price, variant: variant, currency: "EUR", amount: 33.33)
     end
-    subject { variant.price_in(currency).display_amount }
+    subject { variant.price_in(currency) }
 
     context "when currency is not specified" do
       let(:currency) { nil }
 
-      it "returns 0" do
-        expect(subject.to_s).to eql "$0.00"
+      it "returns nil" do
+        expect(subject).to be_nil
       end
     end
 
@@ -210,7 +200,7 @@ describe Spree::Variant, type: :model do
       let(:currency) { 'EUR' }
 
       it "returns the value in the EUR" do
-        expect(subject.to_s).to eql "€33.33"
+        expect(subject.display_price.to_s).to eql "€33.33"
       end
     end
 
@@ -218,7 +208,7 @@ describe Spree::Variant, type: :model do
       let(:currency) { 'USD' }
 
       it "returns the value in the USD" do
-        expect(subject.to_s).to eql "$19.99"
+        expect(subject.display_price.to_s).to eql "$19.99"
       end
     end
   end
@@ -233,7 +223,7 @@ describe Spree::Variant, type: :model do
     context "when currency is not specified" do
       let(:currency) { nil }
 
-      it "returns nil" do
+      it "returns the amount in the default currency" do
         expect(subject).to be_nil
       end
     end
@@ -489,10 +479,19 @@ describe Spree::Variant, type: :model do
   end
 
   describe "deleted_at scope" do
-    before { variant.destroy && variant.reload }
-    it "should have a price if deleted" do
-      variant.price = 10
-      expect(variant.price).to eq(10)
+    let!(:previous_variant_price) { variant.display_price }
+
+    before { variant.destroy }
+
+    it "should keep its price if deleted" do
+      expect(variant.display_price).to eq(previous_variant_price)
+    end
+
+    context 'when loading with pre-fetching of default_price' do
+      it 'also keeps the previous price' do
+        reloaded_variant = Spree::Variant.with_deleted.includes(:default_price).find_by(id: variant.id)
+        expect(reloaded_variant.display_price).to eq(previous_variant_price)
+      end
     end
   end
 

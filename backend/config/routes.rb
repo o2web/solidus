@@ -129,7 +129,7 @@ Spree::Core::Engine.add_routes do
       end
     end
 
-    resource :general_settings do
+    resource :general_settings, only: [:edit, :update] do
       collection do
         post :clear_cache
       end
@@ -206,7 +206,7 @@ Spree::Core::Engine.add_routes do
       end
     end
 
-    resources :style_guide
+    resources :style_guide, only: [:index]
   end
 
   get '/admin', to: 'admin/root#index', as: :admin

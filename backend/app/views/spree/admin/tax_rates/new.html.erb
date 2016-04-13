@@ -1,4 +1,4 @@
-<%= render :partial => 'spree/admin/shared/configuration_menu' %>
+<%= render 'spree/admin/shared/taxes_tabs' %>
 
 <% content_for :page_title do %>
   <%= Spree.t(:new_tax_rate) %>
@@ -14,7 +14,7 @@
 
 <%= form_for [:admin, @tax_rate] do |f| %>
   <fieldset class="no-border-top">
-    
+
     <%= render :partial => 'form', :locals => { :f => f } %>
 
     <div class="clear"></div>

@@ -106,8 +106,8 @@ describe Spree::LineItem, type: :model do
         expect(line_item.cost_price).to eq(variant.cost_price)
       end
 
-      it 'copies the variants currency' do
-        expect(line_item.currency).to eq(variant.currency)
+      it "copies the order's currency" do
+        expect(line_item.currency).to eq(order.currency)
       end
 
       # Test for https://github.com/spree/spree/issues/3481
@@ -164,12 +164,6 @@ describe Spree::LineItem, type: :model do
     end
   end
 
-  describe '.currency' do
-    it 'returns the globally configured currency' do
-      line_item.currency == 'USD'
-    end
-  end
-
   describe ".money" do
     before do
       line_item.price = 3.50
@@ -188,37 +182,43 @@ describe Spree::LineItem, type: :model do
     end
   end
 
-  context "currency same as order.currency" do
-    it "is a valid line item" do
-      line_item = order.line_items.first
-      line_item.currency = order.currency
-      line_item.valid?
+  context 'setting the currency' do
+    let(:line_item) { order.line_items.first }
 
-      expect(line_item.error_on(:currency).size).to eq(0)
+    context "currency same as order.currency" do
+      it "is a valid line item" do
+        line_item.currency = order.currency
+        line_item.valid?
+
+        expect(line_item.error_on(:currency).size).to eq(0)
+      end
     end
-  end
 
-  context "currency different than order.currency" do
-    it "is not a valid line item" do
-      line_item = order.line_items.first
-      line_item.currency = "no currency"
-      line_item.valid?
+    context "currency different than order.currency" do
+      it "is not a valid line item" do
+        expect(Spree::Deprecation).to receive(:warn).at_least(:once)
+        line_item.currency = "RUB"
+        line_item.valid?
 
-      expect(line_item.error_on(:currency).size).to eq(1)
+        expect(line_item.error_on(:currency).size).to eq(1)
+      end
     end
   end
 
   describe "#options=" do
     it "can handle updating a blank line item with no order" do
+      expect(Spree::Deprecation).not_to receive(:warn)
       line_item.options = { price: 123 }
     end
 
     it "updates the data provided in the options" do
+      expect(Spree::Deprecation).not_to receive(:warn)
       line_item.options = { price: 123 }
       expect(line_item.price).to eq 123
     end
 
     it "updates the price based on the options provided" do
+      expect(Spree::Deprecation).to receive(:warn)
       expect(line_item).to receive(:gift_wrap=).with(true)
       expect(line_item.variant).to receive(:gift_wrap_price_modifier_amount_in).with("USD", true).and_return 1.99
       line_item.options = { gift_wrap: true }
@@ -226,11 +226,14 @@ describe Spree::LineItem, type: :model do
     end
   end
 
-  describe "precision of pre_tax_amount" do
-    let!(:line_item) { create :line_item, pre_tax_amount: 4.2051 }
+  describe 'money_price=' do
+    let(:line_item) { Spree::LineItem.new }
+    let(:new_price) { Spree::Money.new(99.00, currency: "RUB") }
 
-    it "keeps four digits of precision even when reloading" do
-      expect(line_item.reload.pre_tax_amount).to eq(4.2051)
+    it 'assigns a new price and currency' do
+      line_item.money_price = new_price
+      expect(line_item.price).to eq(new_price.cents / 100.0)
+      expect(line_item.currency).to eq(new_price.currency.iso_code)
     end
   end
 end

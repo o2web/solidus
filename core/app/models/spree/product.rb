@@ -48,7 +48,7 @@ module Spree
       class_name: 'Spree::Variant',
       dependent: :destroy
 
-    has_many :prices, -> { order(Spree::Variant.arel_table[:position].asc, Spree::Variant.arel_table[:id].asc, :currency) }, through: :variants
+    has_many :prices, -> { order(Spree::Variant.arel_table[:position].asc, Spree::Variant.arel_table[:id].asc, :currency) }, through: :variants_including_master
 
     has_many :stock_items, through: :variants_including_master
 
@@ -199,10 +199,10 @@ module Spree
     # @return [Hash<Spree::OptionType, Array<Spree::OptionValue>>] all option types and option values
     # associated with the products variants grouped by option type
     def variant_option_values_by_option_type(variant_scope = nil)
-      option_value_ids = Spree::OptionValuesVariant.joins(:variant)
+      option_value_scope = Spree::OptionValuesVariant.joins(:variant)
         .where(spree_variants: { product_id: id })
-        .merge(variant_scope)
-        .distinct.pluck(:option_value_id)
+      option_value_scope = option_value_scope.merge(variant_scope) if variant_scope
+      option_value_ids = option_value_scope.distinct.pluck(:option_value_id)
       Spree::OptionValue.where(id: option_value_ids).
         includes(:option_type).
         order("#{Spree::OptionType.table_name}.position, #{Spree::OptionValue.table_name}.position").
@@ -355,7 +355,7 @@ module Spree
 
     def remove_taxon(taxon)
       removed_classifications = classifications.where(taxon: taxon)
-      removed_classifications.each &:remove_from_list
+      removed_classifications.each(&:remove_from_list)
     end
   end
 end

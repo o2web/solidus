@@ -1,6 +1,7 @@
 require 'spec_helper'
 
 describe Spree::OrderContents, type: :model do
+  let!(:store) { create :store }
   let(:order) { Spree::Order.create }
   let(:variant) { create(:variant) }
   let!(:stock_location) { variant.stock_locations.first }
@@ -117,7 +118,7 @@ describe Spree::OrderContents, type: :model do
 
     context 'given a shipment' do
       it "ensure shipment calls update_amounts instead of order calling ensure_updated_shipments" do
-        line_item = subject.add(variant, 1)
+        subject.add(variant, 1)
         shipment = create(:shipment)
         expect(subject.order).to_not receive(:ensure_updated_shipments)
         expect(shipment).to receive(:update_amounts)
@@ -127,7 +128,7 @@ describe Spree::OrderContents, type: :model do
 
     context 'not given a shipment' do
       it "ensures updated shipments" do
-        line_item = subject.add(variant, 1)
+        subject.add(variant, 1)
         expect(subject.order).to receive(:ensure_updated_shipments)
         subject.remove(variant)
       end

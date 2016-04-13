@@ -18,8 +18,7 @@ module Spree
     validates :variant, presence: true
     validates :quantity, numericality: {
       only_integer: true,
-      greater_than: -1,
-      message: Spree.t('validation.must_be_int')
+      greater_than: -1
     }
     validates :price, numericality: true
     validate :ensure_proper_currency
@@ -82,18 +81,33 @@ module Spree
     end
     alias total final_amount
 
-    # @return [Spree::Money] the price of this line item
-    def single_money
-      Spree::Money.new(price, { currency: currency })
+    # @return [BigDecimal] the amount of this line item before included tax
+    # @note just like `amount`, this does not include any additional tax
+    def pre_tax_amount
+      discounted_amount - included_tax_total
     end
-    alias single_display_amount single_money
 
-    # @return [Spree::Moeny] the amount of this line item
-    def money
-      Spree::Money.new(amount, { currency: currency })
+    extend Spree::DisplayMoney
+    money_methods :amount, :discounted_amount, :final_amount, :pre_tax_amount, :price,
+                  :included_tax_total, :additional_tax_total
+    alias discounted_money display_discounted_amount
+
+    # @return [Spree::Money] the price of this line item
+    alias money_price display_price
+    alias single_display_amount display_price
+    alias single_money display_price
+
+    # @return [Spree::Money] the amount of this line item
+    alias money display_amount
+    alias display_total display_amount
+
+    # Sets price and currency from a `Spree::Money` object
+    #
+    # @param [Spree::Money] money - the money object to obtain price and currency from
+    def money_price=(money)
+      self.price = money.to_d
+      self.currency = money.currency.iso_code
     end
-    alias display_total money
-    alias display_amount money
 
     # @return [Boolean] true when it is possible to supply the required
     #   quantity of stock of this line item's variant
@@ -107,27 +121,20 @@ module Spree
       !sufficient_stock?
     end
 
-    # Sets the options on the line item according to the order's currency or
-    # one passed in.
+    # Sets options on the line item.
+    #
+    # The option can be arbitrary attributes on the LineItem. If no price is given in the options,
+    # this will call the legacy `PriceModifier` line item pricer.
     #
     # @param options [Hash] options for this line item
     def options=(options = {})
       return unless options.present?
 
-      opts = options.dup # we will be deleting from the hash, so leave the caller's copy intact
-
-      currency = opts.delete(:currency) || order.try(:currency)
-
-      if currency
-        self.currency = currency
-        self.price    = variant.price_in(currency).amount +
-        variant.price_modifier_amount_in(currency, opts)
-      else
-        self.price = variant.price +
-        variant.price_modifier_amount(opts)
+      # There's no need to call a pricer if we'll set the price directly.
+      unless options.key?(:price)
+        self.money_price = Pricers::PriceModifier.new(self, options).price
       end
-
-      assign_attributes opts
+      assign_attributes options
     end
 
     private
@@ -151,9 +158,10 @@ module Spree
       # If the legacy method #copy_price has been overridden, handle that gracefully
       return handle_copy_price_override if respond_to?(:copy_price)
 
-      self.currency ||= variant.currency
+      self.currency ||= order.currency
       self.cost_price ||= variant.cost_price
-      self.price ||= variant.price
+      self.money_price = Pricers::Conservative.new(self).price
+      true
     end
 
     def handle_copy_price_override
@@ -186,11 +194,14 @@ module Spree
     end
 
     def update_tax_charge
-      Spree::TaxRate.adjust(order.tax_zone, [self])
+      Spree::Tax::ItemAdjuster.new(self).adjust!
     end
 
     def ensure_proper_currency
-      unless currency == order.currency
+      if currency != order.currency
+        Spree::Deprecation.warn "The line items currency is different from it's order currency. " \
+                                "This behavior is not supported anymore and will be deleted soon.",
+                                caller
         errors.add(:currency, :must_match_order_currency)
       end
     end

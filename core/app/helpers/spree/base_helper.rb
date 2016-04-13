@@ -60,7 +60,7 @@ module Spree
 
       flash.each do |msg_type, text|
         unless ignore_types.include?(msg_type)
-          concat(content_tag :div, text, class: "flash #{msg_type}")
+          concat(content_tag(:div, text, class: "flash #{msg_type}"))
         end
       end
       nil
@@ -95,13 +95,14 @@ module Spree
     def taxons_tree(root_taxon, current_taxon, max_level = 1)
       return '' if max_level < 1 || root_taxon.children.empty?
       content_tag :ul, class: 'taxons-list' do
-        root_taxon.children.map do |taxon|
+        taxons = root_taxon.children.map do |taxon|
           css_class = (current_taxon && current_taxon.self_and_ancestors.include?(taxon)) ? 'current' : nil
           content_tag :li, class: css_class do
            link_to(taxon.name, seo_url(taxon)) +
              taxons_tree(taxon, current_taxon, max_level - 1)
           end
-        end.join("\n").html_safe
+        end
+        safe_join(taxons, "\n")
       end
     end
 
@@ -174,12 +175,10 @@ module Spree
         if product.images.empty?
           if !product.is_a?(Spree::Variant) && !product.variant_images.empty?
             create_product_image_tag(product.variant_images.first, product, options, style)
+          elsif product.is_a?(Variant) && !product.product.variant_images.empty?
+            create_product_image_tag(product.product.variant_images.first, product, options, style)
           else
-            if product.is_a?(Variant) && !product.product.variant_images.empty?
-              create_product_image_tag(product.product.variant_images.first, product, options, style)
-            else
-              image_tag "noimage/#{style}.png", options
-            end
+            image_tag "noimage/#{style}.png", options
           end
         else
           create_product_image_tag(product.images.first, product, options, style)

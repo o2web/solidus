@@ -10,17 +10,6 @@ describe Spree::Admin::NavigationHelper, type: :helper do
       end
     end
 
-    it "should accept options with label and capitalize each word of it" do
-      admin_tab = helper.tab(:orders, label: "delivered orders")
-      expect(admin_tab).to include("Delivered Orders")
-    end
-
-    it "should capitalize words with unicode characters" do
-      # overview
-      admin_tab = helper.tab(:orders, label: "přehled")
-      expect(admin_tab).to include("Přehled")
-    end
-
     describe "selection" do
       context "when match_path option is not supplied" do
         subject(:tab) { helper.tab(:orders) }
@@ -34,6 +23,16 @@ describe Spree::Admin::NavigationHelper, type: :helper do
           allow(controller).to receive(:controller_name).and_return("bonobos")
           expect(subject).not_to include('class="selected"')
         end
+
+        it "should be selected if the current path" do
+          allow(helper).to receive(:request).and_return(double(ActionDispatch::Request, fullpath: "/admin/orders"))
+          expect(subject).to include('class="selected"')
+        end
+
+        it "should not be selected if not current path" do
+          allow(helper).to receive(:request).and_return(double(ActionDispatch::Request, fullpath: "/admin/products"))
+          expect(subject).not_to include('class="selected"')
+        end
       end
 
       context "when match_path option is supplied" do
@@ -44,25 +43,25 @@ describe Spree::Admin::NavigationHelper, type: :helper do
 
         it "should be selected if the fullpath matches" do
           allow(controller).to receive(:controller_name).and_return("bonobos")
-          tab = helper.tab(:orders, label: "delivered orders", match_path: '/orders')
+          tab = helper.tab(:orders, match_path: '/orders')
           expect(tab).to include('class="selected"')
         end
 
         it "should be selected if the fullpath matches a regular expression" do
           allow(controller).to receive(:controller_name).and_return("bonobos")
-          tab = helper.tab(:orders, label: "delivered orders", match_path: /orders$|orders\//)
+          tab = helper.tab(:orders, match_path: /orders$|orders\//)
           expect(tab).to include('class="selected"')
         end
 
         it "should not be selected if the fullpath does not match" do
           allow(controller).to receive(:controller_name).and_return("bonobos")
-          tab = helper.tab(:orders, label: "delivered orders", match_path: '/shady')
+          tab = helper.tab(:orders, match_path: '/shady')
           expect(tab).not_to include('class="selected"')
         end
 
         it "should not be selected if the fullpath does not match a regular expression" do
           allow(controller).to receive(:controller_name).and_return("bonobos")
-          tab = helper.tab(:orders, label: "delivered orders", match_path: /shady$|shady\//)
+          tab = helper.tab(:orders, match_path: /shady$|shady\//)
           expect(tab).not_to include('class="selected"')
         end
       end

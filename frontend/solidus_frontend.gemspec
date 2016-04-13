@@ -23,6 +23,9 @@ Gem::Specification.new do |s|
 
   s.add_dependency 'canonical-rails', '~> 0.0.4'
   s.add_dependency 'jquery-rails'
+  s.add_dependency 'sass-rails'
+  s.add_dependency 'coffee-rails'
+  s.add_dependency 'font-awesome-rails', '~> 4.0'
   s.add_dependency 'route_translator'
 
   s.add_development_dependency 'capybara-accessible'

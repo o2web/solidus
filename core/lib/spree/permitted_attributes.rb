@@ -32,7 +32,7 @@ module Spree
       :variant_attributes
     ]
 
-    mattr_reader *ATTRIBUTES
+    mattr_reader(*ATTRIBUTES)
 
     @@address_attributes = [
       :id, :firstname, :lastname, :first_name, :last_name,
@@ -52,7 +52,7 @@ module Spree
       :month, :year, :expiry, :first_name, :last_name, :name
     ]
 
-    @@customer_return_attributes = [:stock_location_id, return_items_attributes: [:id, :inventory_unit_id, :return_authorization_id, :returned, :pre_tax_amount, :reception_status_event, :acceptance_status, :exchange_variant_id, :resellable]]
+    @@customer_return_attributes = [:stock_location_id, return_items_attributes: [:id, :inventory_unit_id, :return_authorization_id, :returned, :amount, :reception_status_event, :acceptance_status, :exchange_variant_id, :resellable]]
 
     @@image_attributes = [:alt, :attachment, :position, :viewable_type, :viewable_id]
 
@@ -120,8 +120,8 @@ module Spree
 
     @@variant_attributes = [
       :name, :presentation, :cost_price, :lock_version,
-      :position, :option_value_ids, :track_inventory,
+      :position, :track_inventory,
       :product_id, :product, :option_values_attributes, :price,
-      :weight, :height, :width, :depth, :sku, :cost_currency, options: [:name, :value]]
+      :weight, :height, :width, :depth, :sku, :cost_currency, option_value_ids: [], options: [:name, :value]]
   end
 end

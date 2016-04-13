@@ -24,14 +24,6 @@ describe Spree::Shipment, type: :model do
   let(:variant) { mock_model(Spree::Variant) }
   let(:line_item) { mock_model(Spree::LineItem, variant: variant) }
 
-  describe "precision of pre_tax_amount" do
-    let!(:line_item) { create :line_item, pre_tax_amount: 4.2051 }
-
-    it "keeps four digits of precision even when reloading" do
-      expect(line_item.reload.pre_tax_amount).to eq(4.2051)
-    end
-  end
-
   # Regression test for https://github.com/spree/spree/issues/4063
   context "number generation" do
     before { allow(order).to receive :update! }
@@ -64,7 +56,7 @@ describe Spree::Shipment, type: :model do
     end
 
     it 'returns pending if backordered' do
-      allow(shipment).to receive_messages inventory_units: [mock_model(Spree::InventoryUnit, backordered?: true)]
+      allow(shipment).to receive_messages inventory_units: [mock_model(Spree::InventoryUnit, allow_ship?: false, canceled?: false)]
       expect(shipment.determine_state(order)).to eq 'pending'
     end
 
@@ -183,7 +175,7 @@ describe Spree::Shipment, type: :model do
       before { allow(shipment).to receive(:can_get_rates?){ true } }
 
       it 'should request new rates, and maintain shipping_method selection' do
-        expect(Spree::Stock::Estimator).to receive(:new).with(shipment.order).and_return(mock_estimator)
+        expect(Spree::Stock::Estimator).to receive(:new).with(no_args).and_return(mock_estimator)
         allow(shipment).to receive_messages(shipping_method: shipping_method2)
 
         expect(shipment.refresh_rates).to eq(shipping_rates)
@@ -191,7 +183,7 @@ describe Spree::Shipment, type: :model do
       end
 
       it 'should handle no shipping_method selection' do
-        expect(Spree::Stock::Estimator).to receive(:new).with(shipment.order).and_return(mock_estimator)
+        expect(Spree::Stock::Estimator).to receive(:new).with(no_args).and_return(mock_estimator)
         allow(shipment).to receive_messages(shipping_method: nil)
         expect(shipment.refresh_rates).to eq(shipping_rates)
         expect(shipment.reload.selected_shipping_rate).not_to be_nil
@@ -205,7 +197,7 @@ describe Spree::Shipment, type: :model do
       end
 
       it "can't get rates without a shipping address" do
-        shipment.order(ship_address: nil)
+        shipment.order.update_attributes!(ship_address: nil)
         expect(shipment.refresh_rates).to eq([])
       end
 
@@ -230,6 +222,10 @@ describe Spree::Shipment, type: :model do
           expect(package.on_hand.count).to eq 1
           expect(package.backordered.count).to eq 1
         end
+
+        it 'should set the shipment to itself' do
+          expect(shipment.to_package.shipment).to eq(shipment)
+        end
       end
     end
   end
@@ -250,7 +246,7 @@ describe Spree::Shipment, type: :model do
         # Set as ready so we can test for change
         shipment.update_attributes!(state: 'ready')
 
-        allow(shipment).to receive_messages(inventory_units: [mock_model(Spree::InventoryUnit, backordered?: true)])
+        allow(shipment).to receive_messages(inventory_units: [mock_model(Spree::InventoryUnit, allow_ship?: false, canceled?: false)])
         expect(shipment).to receive(:update_columns).with(state: 'pending', updated_at: kind_of(Time))
         shipment.update!(order)
       end
@@ -278,12 +274,7 @@ describe Spree::Shipment, type: :model do
 
     context "when payment is not required" do
       before do
-        @original_require_payment = Spree::Config[:require_payment_to_ship]
         Spree::Config[:require_payment_to_ship] = false
-      end
-
-      after do
-        Spree::Config[:require_payment_to_ship] = @original_require_payment
       end
 
       it "should result in a 'ready' state" do
@@ -340,8 +331,6 @@ describe Spree::Shipment, type: :model do
   end
 
   context "when order is completed" do
-    after { Spree::Config.set track_inventory_levels: true }
-
     before do
       allow(order).to receive_messages completed?: true
       allow(order).to receive_messages canceled?: false
@@ -433,7 +422,7 @@ describe Spree::Shipment, type: :model do
     end
 
     context "when any inventory is backordered" do
-      before { allow_any_instance_of(Spree::InventoryUnit).to receive(:backordered?).and_return(true) }
+      before { allow_any_instance_of(Spree::InventoryUnit).to receive(:allow_ship?).and_return(false) }
       it "should result in a 'ready' state" do
         shipment.resume!
         expect(shipment.state).to eq 'pending'
@@ -444,7 +433,7 @@ describe Spree::Shipment, type: :model do
       before do
         allow(order).to receive_messages(can_ship?: true)
         allow(order).to receive_messages(paid?: true)
-        allow_any_instance_of(Spree::InventoryUnit).to receive(:backordered?).and_return(false)
+        allow_any_instance_of(Spree::InventoryUnit).to receive(:allow_ship?).and_return(true)
       end
 
       it "should result in a 'ready' state" do
@@ -547,9 +536,14 @@ describe Spree::Shipment, type: :model do
   end
 
   context "changes shipping rate via general update" do
+    let(:store) { create :store }
     let(:order) do
       Spree::Order.create(
-        payment_total: 100, payment_state: 'paid', total: 100, item_total: 100
+        payment_total: 100,
+        payment_state: 'paid',
+        total: 100,
+        item_total: 100,
+        store: store
       )
     end
 
@@ -653,7 +647,7 @@ describe Spree::Shipment, type: :model do
 
     it "associates variant and order" do
       expect(inventory_units).to receive(:create).with(params)
-      unit = shipment.set_up_inventory('on_hand', variant, order, line_item)
+      shipment.set_up_inventory('on_hand', variant, order, line_item)
     end
   end
 

@@ -65,7 +65,7 @@ module Spree
               total_inventory_count = 4
               rma_return_items_count = 1
               customer_return_return_items_count = 1
-              expect(assigns(:new_return_items).length).to eq (total_inventory_count - rma_return_items_count - customer_return_return_items_count)
+              expect(assigns(:new_return_items).length).to eq(total_inventory_count - rma_return_items_count - customer_return_return_items_count)
             end
 
             it "builds new return items" do
@@ -193,7 +193,7 @@ module Spree
               return_items_attributes: {
                 "0" => {
                   returned: "1",
-                  "pre_tax_amount" => "15.99",
+                  amount: "15.99",
                   inventory_unit_id: order.inventory_units.shipped.last.id,
                   reception_status_event: reception_status_event
                 }

@@ -26,7 +26,7 @@ describe "Stock Management", type: :feature do
     context "with no stock location" do
       before do
         @product = create(:product, name: 'apache baseball cap', price: 10)
-        v = @product.variants.create!(sku: 'FOOBAR')
+        @product.variants.create!(sku: 'FOOBAR')
         Spree::StockLocation.destroy_all
         click_link "Back To Products List"
         within_row(1) do
@@ -54,13 +54,17 @@ describe "Stock Management", type: :feature do
       stock_item.reload
       expect(stock_item.count_on_hand).to eq 4
       expect(stock_item.stock_movements.count).to eq 1
-      expect(stock_item.stock_movements.first.quantity).to eq -6
+      expect(stock_item.stock_movements.first.quantity).to eq(-6)
     end
 
     def adjust_count_on_hand(count_on_hand)
-      find(:css, ".fa-edit[data-id='#{stock_item.id}']").trigger('click')
-      find(:css, "[data-variant-id='#{variant.id}'] input[type='number']").set(count_on_hand)
-      find(:css, ".fa-check[data-id='#{stock_item.id}']").trigger('click')
+      within('.variant-stock-items', text: variant.sku) do
+        within('tr', text: stock_item.stock_location.name) do
+          click_icon :edit
+          find(:css, "input[type='number']").set(count_on_hand)
+          click_icon :check
+        end
+      end
       expect(page).to have_content('Updated successfully')
     end
 
@@ -71,10 +75,11 @@ describe "Stock Management", type: :feature do
 
       it "can add stock items to other stock locations", js: true do
         visit current_url
-        fill_in "variant-count-on-hand-#{variant.id}", with: '3'
-        targetted_select2_search "Other location", from: "#s2id_variant-stock-location-#{variant.id}"
-        find(:css, ".fa-plus[data-variant-id='#{variant.id}']").click
-        wait_for_ajax
+        within('.variant-stock-items', text: variant.sku) do
+          fill_in "variant-count-on-hand-#{variant.id}", with: '3'
+          targetted_select2_search "Other location", from: "#s2id_variant-stock-location-#{variant.id}"
+          click_icon(:plus)
+        end
         expect(page).to have_content('Created successfully')
       end
     end

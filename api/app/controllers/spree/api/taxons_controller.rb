@@ -4,16 +4,17 @@ module Spree
       def index
         if taxonomy
           @taxons = taxonomy.root.children
+        elsif params[:ids]
+          @taxons = Spree::Taxon.accessible_by(current_ability, :read).where(id: params[:ids].split(','))
         else
-          if params[:ids]
-            @taxons = Spree::Taxon.accessible_by(current_ability, :read).where(id: params[:ids].split(','))
-          else
-            @taxons = Spree::Taxon.accessible_by(current_ability, :read).order(:taxonomy_id, :lft).ransack(params[:q]).result
-          end
+          @taxons = Spree::Taxon.accessible_by(current_ability, :read).order(:taxonomy_id, :lft).ransack(params[:q]).result
         end
 
         @taxons = @taxons.page(params[:page]).per(params[:per_page])
         respond_with(@taxons)
+      end
+
+      def new
       end
 
       def show

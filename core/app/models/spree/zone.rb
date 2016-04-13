@@ -15,17 +15,26 @@ module Spree
     after_save :remove_defunct_members
     after_save :remove_previous_default
 
-    scope :with_member_ids,
-          ->(state_ids, country_ids) do
-            joins(:zone_members).where(
-              "(spree_zone_members.zoneable_type = 'Spree::State' AND
-                 spree_zone_members.zoneable_id IN (?))
-               OR (spree_zone_members.zoneable_type = 'Spree::Country' AND
-                 spree_zone_members.zoneable_id IN (?))",
-              state_ids,
-              country_ids
-            ).uniq
-          end
+    scope :with_member_ids, ->(state_ids, country_ids) do
+      return none if !state_ids.present? && !country_ids.present?
+
+      spree_zone_members_table = Spree::ZoneMember.arel_table
+      matching_state =
+        spree_zone_members_table[:zoneable_type].eq("Spree::State").
+        and(spree_zone_members_table[:zoneable_id].in(state_ids))
+      matching_country =
+        spree_zone_members_table[:zoneable_type].eq("Spree::Country").
+        and(spree_zone_members_table[:zoneable_id].in(country_ids))
+      joins(:zone_members).where(matching_state.or(matching_country)).distinct
+    end
+
+    scope :for_address, ->(address) do
+      if address
+        with_member_ids(address.state_id, address.country_id)
+      else
+        none
+      end
+    end
 
     alias :members :zone_members
     accepts_nested_attributes_for :zone_members, allow_destroy: true, reject_if: proc { |a| a['zoneable_id'].blank? }
@@ -58,12 +67,14 @@ module Spree
     # current zone, if it's a state zone. If the passed-in zone has members, it
     # will also be in the result set.
     def self.with_shared_members(zone)
+      return none unless zone
+
       states_and_state_country_ids = zone.states.pluck(:id, :country_id).to_a
       state_ids = states_and_state_country_ids.map(&:first)
       state_country_ids = states_and_state_country_ids.map(&:second)
       country_ids = zone.countries.pluck(:id).to_a
 
-      with_member_ids(state_ids, country_ids + state_country_ids).uniq
+      with_member_ids(state_ids, country_ids + state_country_ids).distinct
     end
 
     def kind
@@ -142,11 +153,10 @@ module Spree
       return false if zone_members.empty? || target.zone_members.empty?
 
       if kind == target.kind
-        return false if (target.zoneables.collect(&:id) - zoneables.collect(&:id)).present?
+        (target.zoneables.collect(&:id) - zoneables.collect(&:id)).empty?
       else
-        return false if (target.zoneables.collect(&:country).collect(&:id) - zoneables.collect(&:id)).present?
+        (target.zoneables.collect(&:country).collect(&:id) - zoneables.collect(&:id)).empty?
       end
-      true
     end
 
     private

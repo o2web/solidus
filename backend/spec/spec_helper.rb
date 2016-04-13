@@ -48,6 +48,10 @@ Capybara.save_and_open_page_path = ENV['CIRCLE_ARTIFACTS'] if ENV['CIRCLE_ARTIFA
 require 'capybara/poltergeist'
 Capybara.javascript_driver = :poltergeist
 
+ActionView::Base.raise_on_missing_translations = true
+
+Capybara.default_max_wait_time = ENV['DEFAULT_MAX_WAIT_TIME'].to_f if ENV['DEFAULT_MAX_WAIT_TIME'].present?
+
 RSpec.configure do |config|
   config.color = true
   config.infer_spec_type_from_file_location!
@@ -70,7 +74,6 @@ RSpec.configure do |config|
   config.before(:each) do
     Rails.cache.clear
     reset_spree_preferences
-    WebMock.disable!
     if RSpec.current_example.metadata[:js]
       page.driver.browser.url_blacklist = ['http://fonts.googleapis.com']
       DatabaseCleaner.strategy = :truncation

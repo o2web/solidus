@@ -115,7 +115,7 @@ module Spree
 
       context "pagination" do
         it "can select the next page of variants" do
-          second_variant = create(:variant)
+          create(:variant)
           api_get :index, page: 2, per_page: 1
           expect(json_response["variants"].first).to have_attributes(show_attributes)
           expect(json_response["total_count"]).to eq(3)
@@ -239,6 +239,14 @@ module Spree
         expect(json_response["sku"]).to eq("12345")
 
         expect(variant.product.variants.count).to eq(1)
+      end
+
+      it "creates new variants with nested option values" do
+        option_values = create_list(:option_value, 2)
+        expect do
+          api_post :create, variant: { sku: "12345",
+                                       option_value_ids: option_values.map(&:id) }
+        end.to change { Spree::OptionValuesVariant.count }.by(2)
       end
 
       it "can update a variant" do

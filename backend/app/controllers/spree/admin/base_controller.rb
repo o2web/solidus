@@ -41,23 +41,13 @@ module Spree
         render partial: '/spree/admin/shared/destroy'
       end
 
-      # Index request for JSON needs to pass a CSRF token in order to prevent JSON Hijacking
-      def check_json_authenticity
-        return unless request.format.js? || request.format.json?
-        return unless protect_against_forgery?
-        auth_token = params[request_forgery_protection_token]
-        unless auth_token && form_authenticity_token == URI.unescape(auth_token)
-          raise(ActionController::InvalidAuthenticityToken)
-        end
-      end
-
       def config_locale
         Spree::Backend::Config[:locale]
       end
 
       def lock_order
         OrderMutex.with_lock!(@order) { yield }
-      rescue Spree::OrderMutex::LockFailed => e
+      rescue Spree::OrderMutex::LockFailed
         flash[:error] = Spree.t(:order_mutex_admin_error)
         redirect_to order_mutex_redirect_path
       end

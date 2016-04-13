@@ -1,5 +1,3 @@
-<%= render 'spree/admin/shared/configuration_menu' %>
-
 <% content_for :page_title do %>
   <%= Spree.t(:new_taxonomy) %>
 <% end %>
@@ -16,7 +14,7 @@
   <fieldset class="no-border-top">
     <br>
     <div class="filter-actions actions" data-hook="buttons">
-      <%= button Spree.t(:create), 'ok' %>
+      <%= button Spree.t('actions.create'), 'ok' %>
     </div>
   </fieldset>
 <% end %>

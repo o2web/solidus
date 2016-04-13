@@ -7,11 +7,37 @@ class FakeCalculator < Spree::Calculator
 end
 
 describe Spree::Order, type: :model do
+  let(:store) { build_stubbed(:store) }
   let(:user) { stub_model(Spree::LegacyUser, email: "spree@example.com") }
-  let(:order) { stub_model(Spree::Order, user: user) }
+  let(:order) { stub_model(Spree::Order, user: user, store: store) }
 
   before do
     allow(Spree::LegacyUser).to receive_messages(current: mock_model(Spree::LegacyUser, id: 123))
+  end
+
+  context '#store' do
+    it { is_expected.to respond_to(:store) }
+
+    context 'when there is no store assigned' do
+      subject { Spree::Order.new }
+
+      context 'when there is no default store' do
+        it "will not be valid" do
+          expect(subject).not_to be_valid
+        end
+      end
+
+      context "when there is a default store" do
+        let!(:store) { create(:store) }
+
+        it { is_expected.to be_valid }
+      end
+    end
+
+    context 'when a store is assigned' do
+      subject { Spree::Order.new(store: create(:store)) }
+      it { is_expected.to be_valid }
+    end
   end
 
   context "#canceled_by" do
@@ -46,6 +72,7 @@ describe Spree::Order, type: :model do
   end
 
   context "#create" do
+    let!(:store) { create :store }
     let(:order) { Spree::Order.create }
 
     it "should assign an order number" do
@@ -221,10 +248,6 @@ describe Spree::Order, type: :model do
         Spree::Config.order_merger_class = TestOrderMerger
       end
 
-      after do
-        Spree::Config.order_merger_class = Spree::PromotionChooser
-      end
-
       let(:user) { build(:user) }
 
       it 'uses the configured order merger' do
@@ -258,6 +281,7 @@ describe Spree::Order, type: :model do
   end
 
   context "ensure shipments will be updated" do
+    subject(:order) { create :order }
     before do
       Spree::Shipment.create!(order: order)
     end
@@ -371,22 +395,51 @@ describe Spree::Order, type: :model do
   end
 
   describe "#tax_address" do
+    let(:order) { build(:order, ship_address: ship_address, bill_address: bill_address, store: store) }
+    let(:store) { build(:store) }
+
     before { Spree::Config[:tax_using_ship_address] = tax_using_ship_address }
     subject { order.tax_address }
 
-    context "when tax_using_ship_address is true" do
-      let(:tax_using_ship_address) { true }
+    context "when the order has no addresses" do
+      let(:ship_address) { nil }
+      let(:bill_address) { nil }
 
-      it 'returns ship_address' do
-        expect(subject).to eq(order.ship_address)
+      context "when tax_using_ship_address is true" do
+        let(:tax_using_ship_address) { true }
+
+        it 'returns the stores default cart tax location' do
+          expect(subject).to eq(store.default_cart_tax_location)
+        end
+      end
+
+      context "when tax_using_ship_address is not true" do
+        let(:tax_using_ship_address) { false }
+
+        it 'returns the stores default cart tax location' do
+          expect(subject).to eq(store.default_cart_tax_location)
+        end
       end
     end
 
-    context "when tax_using_ship_address is not true" do
-      let(:tax_using_ship_address) { false }
+    context "when the order has addresses" do
+      let(:ship_address) { build(:address) }
+      let(:bill_address) { build(:address) }
 
-      it "returns bill_address" do
-        expect(subject).to eq(order.bill_address)
+      context "when tax_using_ship_address is true" do
+        let(:tax_using_ship_address) { true }
+
+        it 'returns ship_address' do
+          expect(subject).to eq(order.ship_address)
+        end
+      end
+
+      context "when tax_using_ship_address is not true" do
+        let(:tax_using_ship_address) { false }
+
+        it "returns bill_address" do
+          expect(subject).to eq(order.bill_address)
+        end
       end
     end
   end
@@ -760,10 +813,10 @@ describe Spree::Order, type: :model do
   describe "#pre_tax_item_amount" do
     it "sums all of the line items' pre tax amounts" do
       subject.line_items = [
-        Spree::LineItem.new(price: 10, quantity: 2, pre_tax_amount: 5.0),
-        Spree::LineItem.new(price: 30, quantity: 1, pre_tax_amount: 14.0)
+        Spree::LineItem.new(price: 10, quantity: 2, included_tax_total: 15.0),
+        Spree::LineItem.new(price: 30, quantity: 1, included_tax_total: 16.0)
       ]
-
+      # (2*10)-15 + 30-16 = 5 + 14 = 19
       expect(subject.pre_tax_item_amount).to eq 19.0
     end
   end
@@ -825,6 +878,7 @@ describe Spree::Order, type: :model do
   end
 
   describe "#create_proposed_shipments" do
+    subject(:order) { create(:order) }
     it "assigns the coordinator returned shipments to its shipments" do
       shipment = build(:shipment)
       allow_any_instance_of(Spree::Stock::Coordinator).to receive(:shipments).and_return([shipment])
@@ -1001,7 +1055,7 @@ describe Spree::Order, type: :model do
         subject { order }
 
         it "returns the sum of the payment amounts" do
-          expect(subject.total_applicable_store_credit).to eq (payment.amount + second_payment.amount)
+          expect(subject.total_applicable_store_credit).to eq(payment.amount + second_payment.amount)
         end
       end
 
@@ -1225,7 +1279,7 @@ describe Spree::Order, type: :model do
         let(:applicable_store_credit) { 10.0 }
 
         it "deducts the applicable store credit" do
-          expect(subject.order_total_after_store_credit).to eq (order_total - applicable_store_credit)
+          expect(subject.order_total_after_store_credit).to eq(order_total - applicable_store_credit)
         end
       end
 
@@ -1309,7 +1363,7 @@ describe Spree::Order, type: :model do
       end
 
       it "returns a negative amount" do
-        expect(subject.display_total_applicable_store_credit.money.cents).to eq (total_applicable_store_credit * -100.0)
+        expect(subject.display_total_applicable_store_credit.money.cents).to eq(total_applicable_store_credit * -100.0)
       end
     end
 
@@ -1325,7 +1379,7 @@ describe Spree::Order, type: :model do
       end
 
       it "returns the order_total_after_store_credit amount" do
-        expect(subject.display_order_total_after_store_credit.money.cents).to eq (order_total_after_store_credit * 100.0)
+        expect(subject.display_order_total_after_store_credit.money.cents).to eq(order_total_after_store_credit * 100.0)
       end
     end
 
@@ -1341,7 +1395,7 @@ describe Spree::Order, type: :model do
       end
 
       it "returns the total_available_store_credit amount" do
-        expect(subject.display_total_available_store_credit.money.cents).to eq (total_available_store_credit * 100.0)
+        expect(subject.display_total_available_store_credit.money.cents).to eq(total_available_store_credit * 100.0)
       end
     end
 
@@ -1362,7 +1416,7 @@ describe Spree::Order, type: :model do
 
       it "returns all of the user's available store credit minus what's applied to the order amount" do
         amount_remaining = total_available_store_credit - total_applicable_store_credit
-        expect(subject.display_store_credit_remaining_after_capture.money.cents).to eq (amount_remaining * 100.0)
+        expect(subject.display_store_credit_remaining_after_capture.money.cents).to eq(amount_remaining * 100.0)
       end
     end
 

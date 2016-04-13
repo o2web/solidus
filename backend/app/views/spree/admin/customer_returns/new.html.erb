@@ -33,7 +33,7 @@
         </fieldset>
 
         <%= f.field_container :stock_location do %>
-          <%= f.label :stock_location, Spree.t(:stock_location) %>
+          <%= f.label :stock_location_id, Spree::StockLocation.model_name.human %>
           <%= f.select :stock_location_id, Spree::StockLocation.order_default.to_a.collect{|l|[l.name.humanize, l.id]}, {include_blank: true}, {class: 'select2 fullwidth', "data-placeholder" => Spree.t(:select_a_stock_location)} %>
           <%= f.error_message_on :stock_location_id %>
         <% end %>
@@ -41,8 +41,7 @@
       </div>
 
       <div class="form-buttons filter-actions actions" data-hook="buttons">
-        <%= button Spree.t(:create), 'ok' %>
-        <span class="or"><%= Spree.t(:or) %></span>
+        <%= button Spree.t('actions.create'), 'ok' %>
         <%= button_link_to Spree.t('actions.cancel'), admin_order_customer_returns_url(@order), :icon => 'remove' %>
       </div>
     </fieldset>

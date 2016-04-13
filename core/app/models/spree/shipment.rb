@@ -74,12 +74,15 @@ module Spree
     self.whitelisted_ransackable_associations = ['order']
     self.whitelisted_ransackable_attributes = ['number']
 
+    delegate :tax_category, to: :selected_shipping_rate, allow_nil: true
+
     def can_transition_from_pending_to_shipped?
       !requires_shipment?
     end
 
     def can_transition_from_pending_to_ready?
-      order.can_ship? && !inventory_units.any?(&:backordered?) &&
+      order.can_ship? &&
+        inventory_units.all? { |iu| iu.allow_ship? || iu.canceled? } &&
         (order.paid? || !Spree::Config[:require_payment_to_ship])
     end
 
@@ -88,8 +91,8 @@ module Spree
     end
 
     extend DisplayMoney
-    money_methods :cost, :discounted_cost, :final_price, :item_cost
-    alias display_amount display_cost
+    money_methods :cost, :amount, :discounted_cost, :final_price, :item_cost
+    alias_attribute :amount, :cost
 
     def add_shipping_method(shipping_method, selected = false)
       shipping_rates.create(shipping_method: shipping_method, selected: selected, cost: cost)
@@ -161,6 +164,10 @@ module Spree
       inventory_units.includes(:line_item).map(&:line_item).uniq
     end
 
+    def pre_tax_amount
+      discounted_amount - included_tax_total
+    end
+
     def ready_or_pending?
       ready? || pending?
     end
@@ -172,7 +179,7 @@ module Spree
       # StockEstimator.new assigment below will replace the current shipping_method
       original_shipping_method_id = shipping_method.try!(:id)
 
-      new_rates = Spree::Config.stock.estimator_class.new(order).shipping_rates(to_package)
+      new_rates = Spree::Config.stock.estimator_class.new.shipping_rates(to_package)
 
       # If one of the new rates matches the previously selected shipping
       # method, select that instead of the default provided by the estimator.
@@ -216,10 +223,9 @@ module Spree
     # ready      all other cases
     def determine_state(order)
       return 'canceled' if order.canceled?
+      return 'shipped' if shipped?
       return 'pending' unless order.can_ship?
-      return 'pending' if inventory_units.any? &:backordered?
-      return 'shipped' if state == 'shipped'
-      if order.paid? || !Spree::Config[:require_payment_to_ship]
+      if can_transition_from_pending_to_ready?
         'ready'
       else
         'pending'
@@ -244,10 +250,6 @@ module Spree
       selected_shipping_rate.try(:shipping_method) || shipping_rates.first.try(:shipping_method)
     end
 
-    def tax_category
-      selected_shipping_rate.try(:tax_rate).try(:tax_category)
-    end
-
     # Only one of either included_tax_total or additional_tax_total is set
     # This method returns the total of the two. Saves having to check if
     # tax is included or additional.
@@ -257,6 +259,7 @@ module Spree
 
     def to_package
       package = Stock::Package.new(stock_location)
+      package.shipment = self
       inventory_units.includes(:variant).joins(:variant).group_by(&:state).each do |state, state_inventory_units|
         package.add_multiple state_inventory_units, state.to_sym
       end
@@ -350,9 +353,6 @@ module Spree
     end
 
     def transfer_to_shipment(variant, quantity, shipment_to_transfer_to)
-      quantity_already_shipment_to_transfer_to = shipment_to_transfer_to.manifest.find{ |mi| mi.line_item.variant == variant }.try(:quantity) || 0
-      final_quantity = quantity + quantity_already_shipment_to_transfer_to
-
       if quantity <= 0 || self == shipment_to_transfer_to
         raise ArgumentError
       end

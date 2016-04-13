@@ -33,7 +33,7 @@ module Spree
     has_many :stock_locations, through: :stock_items
     has_many :stock_movements, through: :stock_items
 
-    has_many :option_values_variants, dependent: :destroy
+    has_many :option_values_variants
     has_many :option_values, through: :option_values_variants
 
     has_many :images, -> { order(:position) }, as: :viewable, dependent: :destroy, class_name: "Spree::Image"
@@ -56,6 +56,8 @@ module Spree
     after_create :set_master_out_of_stock, unless: :is_master?
 
     after_touch :clear_in_stock_cache
+
+    after_real_destroy :destroy_option_values_variants
 
     # Returns variants that are in stock. When stock locations are provided as
     # a parameter, the scope is limited to variants that are in stock in the
@@ -182,7 +184,7 @@ module Spree
 
       current_value = option_values.detect { |o| o.option_type.name == opt_name }
 
-      unless current_value.nil?
+      if current_value
         return if current_value.name == opt_value
         option_values.delete(current_value)
       else
@@ -214,7 +216,7 @@ module Spree
     # @param currency [String] the desired currency
     # @return [Spree::Price] the price in the desired currency
     def price_in(currency)
-      prices.detect{ |price| price.currency == currency && price.is_default } || Spree::Price.new(variant_id: id, currency: currency)
+      prices.find_by(currency: currency, is_default: true)
     end
 
     # Fetches the price amount in the specified currency.
@@ -228,6 +230,7 @@ module Spree
     # Calculates the sum of the specified price modifiers in the specified
     # currency.
     #
+    # @deprecated This is a very complex way of modifying prices, please write a pricer instead
     # @param currency [String] (see #price)
     # @param options (see #price_modifier_amount)
     # @return (see #price_modifier_amount)
@@ -243,9 +246,11 @@ module Spree
         end
       }.sum
     end
+    deprecate :price_modifier_amount_in, deprecator: Spree::Deprecation
 
     # Calculates the sum of the specified price modifiers.
     #
+    # @deprecated This method does not handle currencies
     # @param options [Hash] for specifying keys, eg: `{keys: ['key_1', 'key_2']}`
     # @return [Fixnum] the sum
     def price_modifier_amount(options = {})
@@ -260,6 +265,7 @@ module Spree
         end
       }.sum
     end
+    deprecate :price_modifier_amount, deprecator: Spree::Deprecation
 
     # Generates a friendly name and sku string.
     #
@@ -345,9 +351,6 @@ module Spree
           self.price = product.master.price
         end
       end
-      if currency.nil?
-        self.currency = Spree::Config[:currency]
-      end
     end
 
     def set_cost_currency
@@ -370,6 +373,10 @@ module Spree
 
     def clear_in_stock_cache
       Rails.cache.delete(in_stock_cache_key)
+    end
+
+    def destroy_option_values_variants
+      option_values_variants.destroy_all
     end
   end
 end

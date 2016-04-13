@@ -43,7 +43,7 @@ module Spree
 
       context 'when a payment is negative' do
         before do
-          expect_any_instance_of(Spree::Payment).to receive(:amount).and_return -100
+          expect_any_instance_of(Spree::Payment).to receive(:amount).and_return(-100)
         end
 
         it 'returns an empty array' do
@@ -61,7 +61,7 @@ module Spree
 
         before do
           reimbursement.order.payments.first.update_attributes!(amount: 5.0)
-          return_item.update_attributes!(pre_tax_amount: refund_amount)
+          return_item.update_attributes!(amount: refund_amount)
         end
 
         it "includes refunds all payment type" do

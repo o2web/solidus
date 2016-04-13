@@ -11,11 +11,6 @@ module Spree
       CreditCard
     end
 
-    # instantiates the selected gateway and configures with the options stored in the database
-    def self.current
-      super
-    end
-
     def provider
       gateway_options = options
       gateway_options.delete :login if gateway_options.key?(:login) && gateway_options[:login].nil?
@@ -58,13 +53,11 @@ module Spree
 
     def reusable_sources(order)
       if order.completed?
-        sources_by_order order
+        sources_by_order(order)
+      elsif order.user_id
+        credit_cards.where(user_id: order.user_id).with_payment_profile
       else
-        if order.user_id
-          credit_cards.where(user_id: order.user_id).with_payment_profile
-        else
-          []
-        end
+        []
       end
     end
   end

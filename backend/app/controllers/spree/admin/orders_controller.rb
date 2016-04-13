@@ -15,6 +15,7 @@ module Spree
         params[:q][:completed_at_not_null] ||= '1' if Spree::Config[:show_only_complete_orders_by_default]
         @show_only_completed = params[:q][:completed_at_not_null] == '1'
         params[:q][:s] ||= @show_only_completed ? 'completed_at desc' : 'created_at desc'
+        params[:q][:completed_at_not_null] = '' unless @show_only_completed
 
         # As date params are deleted if @show_only_completed, store
         # the original date so we can restore them into the params
@@ -88,16 +89,6 @@ module Spree
         end
       end
 
-      def update
-        @order.contents.update_cart(params[:order])
-        @order.errors.add(:line_items, Spree.t('errors.messages.blank')) if @order.line_items.empty?
-        if @order.completed?
-          render action: :edit
-        else
-          redirect_to admin_order_customer_path(@order)
-        end
-      end
-
       def advance
         if @order.completed?
           flash[:notice] = Spree.t('order_already_completed')
@@ -107,11 +98,10 @@ module Spree
 
           if @order.confirm?
             flash[:success] = Spree.t('order_ready_for_confirm')
-            redirect_to confirm_admin_order_url(@order)
           else
             flash[:error] = @order.errors.full_messages
-            redirect_to confirm_admin_order_url(@order)
           end
+          redirect_to confirm_admin_order_url(@order)
         end
       end
 

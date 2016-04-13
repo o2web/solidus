@@ -1,8 +1,3 @@
-<%= render :partial => 'spree/admin/shared/configuration_menu' %>
-
-<%= render :partial => 'spree/admin/taxons/list_template' %>
-<%= render :partial => 'js_head' %>
-
 <% content_for :page_title do %>
   <%= Spree.t(:taxonomy_edit) %>
 <% end %>
@@ -21,7 +16,6 @@
     <%= render :partial => 'form', :locals => { :f => f } %>
     <div class="filter-actions actions">
       <%= button Spree.t('actions.update'), 'refresh' %>
-      <span class="or"><%= Spree.t(:or) %></span>
       <%= button_link_to Spree.t('actions.cancel'), admin_taxonomies_path, :icon => 'remove' %>
     </div>
   </fieldset>
@@ -33,6 +27,6 @@
       Spree.routes.taxonomy_taxons_path = "<%= spree.api_taxonomy_taxons_path(@taxonomy) %>";
       Spree.routes.admin_taxonomy_taxons_path = "<%= spree.admin_taxonomy_taxons_path(@taxonomy) %>";
     </script>
-    <div id="taxonomy_tree" class="tree"></div>
+    <div id="taxonomy_tree" class="tree" data-taxonomy-id="<%= @taxonomy.id %>"></div>
   </div>
 <% end %>

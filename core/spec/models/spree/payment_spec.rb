@@ -1,7 +1,8 @@
 require 'spec_helper'
 
 describe Spree::Payment, type: :model do
-  let(:order) { Spree::Order.create }
+  let(:store) { create :store }
+  let(:order) { Spree::Order.create(store: store) }
   let(:refund_reason) { create(:refund_reason) }
 
   let(:gateway) do
@@ -89,7 +90,7 @@ describe Spree::Payment, type: :model do
       payment.source = Spree::CreditCard.new
       expect(payment).not_to be_valid
       cc_errors = payment.errors['Credit Card']
-      expect(cc_errors).to include("Number can't be blank")
+      expect(cc_errors).to include("Card Number can't be blank")
       expect(cc_errors).to include("Month is not a number")
       expect(cc_errors).to include("Year is not a number")
       expect(cc_errors).to include("Verification Value can't be blank")
@@ -710,7 +711,7 @@ describe Spree::Payment, type: :model do
       context "when successfully connecting to the gateway" do
         it "should create a payment profile" do
           expect(payment.payment_method).to receive :create_profile
-          payment = Spree::Payment.create(
+          Spree::Payment.create(
             amount: 100,
             order: order,
             source: card,
@@ -725,7 +726,7 @@ describe Spree::Payment, type: :model do
 
       it "should not create a payment profile" do
         expect(gateway).not_to receive :create_profile
-        payment = Spree::Payment.create(
+        Spree::Payment.create(
           amount: 100,
           order: order,
           source: card,

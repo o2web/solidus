@@ -69,7 +69,7 @@ module Spree
     has_many :order_promotions, class_name: 'Spree::OrderPromotion'
     has_many :promotions, through: :order_promotions
 
-    has_many :cartons, -> { uniq }, through: :inventory_units
+    has_many :cartons, -> { distinct }, through: :inventory_units
     has_many :shipments, dependent: :destroy, inverse_of: :order do
       def states
         pluck(:state).uniq
@@ -83,6 +83,7 @@ module Spree
     accepts_nested_attributes_for :shipments
 
     # Needs to happen before save_permalink is called
+    before_validation :associate_store
     before_validation :set_currency
     before_validation :generate_order_number, on: :create
     before_validation :assign_billing_to_shipping_address, if: :use_billing?
@@ -94,6 +95,7 @@ module Spree
     validates :email, presence: true, if: :require_email
     validates :email, email: true, if: :require_email, allow_blank: true
     validates :number, presence: true, uniqueness: { allow_blank: true }
+    validates :store_id, presence: true
 
     make_permalink field: :number
 
@@ -154,12 +156,17 @@ module Spree
 
     # For compatiblity with Calculator::PriceSack
     def amount
-      line_items.inject(0.0) { |sum, li| sum + li.amount }
+      line_items.map(&:amount).sum
     end
 
     # Sum of all line item amounts pre-tax
     def pre_tax_item_amount
       line_items.to_a.sum(&:pre_tax_amount)
+    end
+
+    # Sum of all line item amounts after promotions, before added tax
+    def discounted_item_amount
+      line_items.to_a.sum(&:discounted_amount)
     end
 
     def currency
@@ -208,7 +215,11 @@ module Spree
 
     # Returns the address for taxation based on configuration
     def tax_address
-      Spree::Config[:tax_using_ship_address] ? ship_address : bill_address
+      if Spree::Config[:tax_using_ship_address]
+        ship_address
+      else
+        bill_address
+      end || store.default_cart_tax_location
     end
 
     def updater
@@ -321,10 +332,7 @@ module Spree
     # Creates new tax charges if there are any applicable rates. If prices already
     # include taxes then price adjustments are created instead.
     def create_tax_charge!
-      # We want to only look up the applicable tax zone once and pass it to TaxRate calculation to avoid duplicated lookups.
-      order_tax_zone = tax_zone
-      Spree::TaxRate.adjust(order_tax_zone, line_items)
-      Spree::TaxRate.adjust(order_tax_zone, shipments) if shipments.any?
+      Spree::Tax::OrderAdjuster.new(self).adjust!
     end
 
     def outstanding_balance
@@ -680,6 +688,10 @@ module Spree
     end
 
     private
+
+    def associate_store
+      self.store ||= Spree::Store.default
+    end
 
     def link_by_email
       self.email = user.email if user

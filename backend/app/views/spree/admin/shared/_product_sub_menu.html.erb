@@ -1,4 +1,4 @@
-<ul id="sub_nav" class="admin-subnav" data-hook="admin_product_sub_tabs">
+<ul class="admin-subnav" data-hook="admin_product_sub_tabs">
   <% if can? :admin, Spree::Product %>
     <%= tab :products, match_path: '/products' %>
   <% end %>
@@ -11,7 +11,7 @@
   <% if can? :admin, Spree::Prototype %>
     <%= tab :prototypes %>
   <% end %>
-  <% if can? :admin, Spree::Taxonomy %>
+  <% if can? :display, Spree::Taxonomy %>
     <%= tab :taxonomies %>
   <% end %>
   <% if can? :admin, Spree::Taxon %>

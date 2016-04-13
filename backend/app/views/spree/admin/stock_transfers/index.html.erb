@@ -1,5 +1,5 @@
 <% content_for :page_title do %>
-  <%= Spree.t(:stock_transfers) %>
+  <%= Spree::StockTransfer.model_name.human(count: :other) %>
 <% end %>
 
 <% content_for :page_actions do %>
@@ -19,7 +19,7 @@
     <%= search_form_for [:admin, @search] do |f| %>
       <div class="field-block alpha four columns">
         <div class="field">
-          <%= f.label nil, Spree.t(:stock_location) %>
+          <%= f.label nil, Spree::StockLocation.model_name.human %>
           <%= f.select :source_location_id_or_destination_location_id_eq, options_from_collection_for_select(@stock_locations, :id, :name, params[:q][:source_location_id_or_destination_location_id_eq]), {include_blank: true}, {class: 'select2 fullwidth'} %>
         </div>
       </div>
@@ -41,7 +41,7 @@
 
       <div class="field-block alpha four columns">
         <div class="field">
-          <%= f.label nil, Spree.t(:transfer_number) %>
+          <%= f.label nil, Spree::StockTransfer.human_attribute_name(:number) %>
           <%= f.text_field :number_cont, value: params[:q][:number_cont] %>
         </div>
       </div>
@@ -66,7 +66,7 @@
   </div>
 <% end %>
 
-<%= paginate @stock_transfers %>
+<%= paginate @stock_transfers, theme: "solidus_admin" %>
 
 
 <% if @stock_transfers.any? %>
@@ -108,8 +108,10 @@
   </table>
 <% else %>
   <div class="alpha sixteen columns no-objects-found">
-    <%= Spree.t(:no_resource_found, resource: I18n.t(:other, scope: 'activerecord.models.spree/stock_transfer')) %>
+    <%= render 'spree/admin/shared/no_objects_found',
+                  resource: Spree::StockTransfer,
+                  new_resource_url: new_object_url %>
   </div>
 <% end %>
 
-<%= paginate @stock_transfers %>
+<%= paginate @stock_transfers, theme: "solidus_admin" %>

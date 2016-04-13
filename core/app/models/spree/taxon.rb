@@ -13,6 +13,8 @@ module Spree
     has_many :promotion_rules, through: :promotion_rule_taxons
 
     before_create :set_permalink
+    before_update :set_permalink
+    after_update :update_child_permalinks, if: :permalink_changed?
 
     validates :name, presence: true
     validates :meta_keywords, length: { maximum: 255 }
@@ -47,7 +49,7 @@ module Spree
     # @return [String] meta_title if set otherwise a string containing the
     #   root name and taxon name
     def seo_title
-      unless meta_title.blank?
+      if meta_title.present?
         meta_title
       else
         root? ? name : "#{root.name} - #{name}"
@@ -57,11 +59,22 @@ module Spree
     # Sets this taxons permalink to a valid url encoded string based on its
     # name and its parents permalink (if present.)
     def set_permalink
-      if parent.present?
-        self.permalink = [parent.permalink, (permalink.blank? ? name.to_url : permalink.split('/').last)].join('/')
-      else
-        self.permalink = name.to_url if permalink.blank?
-      end
+      permalink_tail = permalink.split('/').last if permalink.present?
+      permalink_tail ||= name.to_url
+      self.permalink_part = permalink_tail
+    end
+
+    # Update the permalink for this taxon and all children (if necessary)
+    def update_permalinks
+      set_permalink
+
+      # This will trigger update_child_permalinks if permalink has changed
+      save!
+    end
+
+    # Update the permalinks for all children
+    def update_child_permalinks
+      children.each(&:update_permalinks)
     end
 
     # @return [String] this taxon's permalink
@@ -78,10 +91,9 @@ module Spree
     # @return [String] this taxon's ancestors names followed by its own name,
     #   separated by arrows
     def pretty_name
-      ancestor_chain = ancestors.inject("") do |name, ancestor|
-        name += "#{ancestor.name} -> "
-      end
-      ancestor_chain + name.to_s
+      ancestor_chain = ancestors.map(&:name)
+      ancestor_chain << name
+      ancestor_chain.join(" -> ")
     end
 
     # @see https://github.com/spree/spree/issues/3390
@@ -93,6 +105,18 @@ module Spree
       # NOTE: no :position column needed - awesom_nested_set doesn't handle the
       # reordering if you bring your own :order_column.
       move_to_child_with_index(parent, idx.to_i) unless new_record?
+    end
+
+    def permalink_part
+      permalink.split('/').last
+    end
+
+    def permalink_part=(value)
+      if parent.present?
+        self.permalink = "#{parent.permalink}/#{value}"
+      else
+        self.permalink = value
+      end
     end
 
     private

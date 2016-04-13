@@ -2,6 +2,7 @@ module Spree
   class Store < Spree::Base
     has_many :store_payment_methods, inverse_of: :store
     has_many :payment_methods, through: :store_payment_methods
+    has_many :orders, class_name: "Spree::Order"
 
     validates :code, presence: true, uniqueness: { allow_blank: true }
     validates :name, presence: true
@@ -20,6 +21,11 @@ module Spree
 
     def self.default
       where(default: true).first || new
+    end
+
+    def default_cart_tax_location
+      @default_cart_tax_location ||=
+        Spree::Tax::TaxLocation.new(country: Spree::Country.find_by(iso: cart_tax_country_iso))
     end
 
     private

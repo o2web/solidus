@@ -46,7 +46,7 @@ class Spree::OrderShipping
     carton = nil
 
     Spree::InventoryUnit.transaction do
-      inventory_units.each &:ship!
+      inventory_units.each(&:ship!)
 
       carton = Spree::Carton.create!(
         stock_location: stock_location,
@@ -64,7 +64,7 @@ class Spree::OrderShipping
       # TODO: Remove tracking numbers from shipments.
       shipment.update_attributes!(tracking: tracking_number)
 
-      next unless shipment.inventory_units(true).all? { |iu| iu.shipped? || iu.canceled? }
+      next unless shipment.inventory_units.reload.all? { |iu| iu.shipped? || iu.canceled? }
       # TODO: make OrderShipping#ship_shipment call Shipment#ship! rather than
       # having Shipment#ship! call OrderShipping#ship_shipment. We only really
       # need this `update_columns` for the specs, until we make that change.

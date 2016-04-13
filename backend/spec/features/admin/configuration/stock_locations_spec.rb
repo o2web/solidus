@@ -4,9 +4,10 @@ describe "Stock Locations", type: :feature do
   stub_authorization!
 
   before(:each) do
-    country = create(:country)
+    create(:country)
     visit spree.admin_path
     click_link "Settings"
+    click_link "Shipping"
     click_link "Stock Locations"
   end
 
@@ -21,7 +22,7 @@ describe "Stock Locations", type: :feature do
   end
 
   it "can delete an existing stock location", js: true do
-    location = create(:stock_location)
+    create(:stock_location)
     visit current_path
 
     expect(find('#listing_stock_locations')).to have_content("NY Warehouse")
