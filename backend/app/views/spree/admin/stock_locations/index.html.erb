@@ -1,7 +1,7 @@
 <%= render 'spree/admin/shared/shipping_tabs' %>
 
 <% content_for :page_title do %>
-  <%= Spree::StockLocation.model_name.human(count: :other) %>
+  <%= Spree::StockLocation.model_name.human(count: 2.1) %>
 <% end %>
 
 <% content_for :page_actions do %>
@@ -34,7 +34,7 @@
         <th class="no-border"></th>
         <th><%= Spree::StockLocation.human_attribute_name(:name) %></th>
         <th><%= Spree::StockLocation.human_attribute_name(:state_id) %></th>
-        <th><%= Spree::StockMovement.model_name.human(count: :other) %></th>
+        <th><%= Spree::StockMovement.model_name.human(count: 2.1) %></th>
         <th class="actions"></th>
       </tr>
     </thead>
@@ -53,7 +53,7 @@
           <td class="align-center"><span class="state <%= state(stock_location) %>"><%= Spree.t(state(stock_location)) %></span></td>
           <td class="align-center">
             <% if can?(:display, Spree::StockMovement) %>
-              <%= link_to Spree::StockMovement.model_name.human(count: :other), admin_stock_location_stock_movements_path(stock_location.id) %>
+              <%= link_to Spree::StockMovement.model_name.human(count: 2.1), admin_stock_location_stock_movements_path(stock_location.id) %>
             <% else %>
               Stock Movements
             <% end %>
