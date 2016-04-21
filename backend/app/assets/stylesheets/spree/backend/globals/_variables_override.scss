@@ -1,7 +1,8 @@
-/*--------------------------------------------------------- 
+/*---------------------------------------------------------
   Empty file to override variables in user applications.
 
-  To set your own colors, sizes or fonts just override this 
+  To set your own colors, sizes or fonts just override this
   file in your application and set variables according to
   globals/_variables.scss file.
   --------------------------------------------------------- */
+@import 'spree/backend/themes/blue_steel/globals/_variables_override';
