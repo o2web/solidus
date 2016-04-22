@@ -18,6 +18,14 @@
           <% end %>
         </div>
 
+        <div data-hook="admin_general_setting_input_name">
+          <%= f.field_container :code do %>
+            <%= f.label :code %>
+            <%= f.text_field :code, class: 'fullwidth' %>
+            <%= f.error_message_on :code %>
+          <% end %>
+        </div>
+
         <div data-hook="admin_general_setting_input_seo_title">
           <%= f.field_container :seo_title do %>
             <%= f.label :seo_title %>
